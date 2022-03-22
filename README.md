@@ -26,7 +26,7 @@ Hence authors using conda to build the working environment.
 ```bash
 # please check the conda_env.txt file and requirements.txt file does exist
 # create conda environment
-conda create -n COMP30024 --file conda_env.txt
+conda create -n COMP30024 --file conda.env.txt
 
 # after set up conda environment, please install package dependencies
 pip install -r requirements.txt
