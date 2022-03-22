@@ -126,3 +126,11 @@ ui-tests/playwright-report
 
 # VSCode
 .vscode
+=======
+
+# ignore MACOS cache files
+.DS_Store
+
+# ignore jupyter checkpoint files
+.virtual_documents
+.ipynb_checkpoints
