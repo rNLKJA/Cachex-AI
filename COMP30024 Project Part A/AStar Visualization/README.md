@@ -12,6 +12,8 @@ After that, you need to return a board dictionary which represent the valid poin
 
 The last is executing the main function to see path updates.
 
-<img src='https://github.com/chuangyu-hscy/refactored-octo-potato/blob/main/COMP30024%20Project%20Part%20A/AStar%20Visualization/sample.png' align='center' />
+<br />
+
+<img src='https://github.com/chuangyu-hscy/refactored-octo-potato/blob/main/COMP30024%20Project%20Part%20A/AStar%20Visualization/sample.png' align='middle' width=300 />
 
 You could also save output images to check a path is valid or not.
