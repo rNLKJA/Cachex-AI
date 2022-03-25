@@ -1,7 +1,11 @@
 # A* Path finding 
 
-Dijkstra's Algorithm vs. A* Algorithm: https://stackabuse.com/dijkstras-algorithm-vs-a-algorithm/
-Dijkstra vs. A* – Pathfinding: https://www.baeldung.com/cs/dijkstra-vs-a-pathfinding
+Under this file are materials help to understand the concept of A* algorithm. 
+
+All codes in this folder are linked with this isse: https://github.com/chuangyu-hscy/refactored-octo-potato/issues/1
+
+and coding must work on this pull request: https://github.com/chuangyu-hscy/refactored-octo-potato/pull/6
+
 
 ## Djistra
 
@@ -16,3 +20,8 @@ The two assumptions ensure that Dijkstra always terminates and returns either th
 **Two assumptions**
 1. the edges have strictly positive costs $\boldsymbol{\geq \varepsilon > 0}$
 2. the state graph is finite, or a goal state is reachable from the start
+
+## Reference
+
+Dijkstra's Algorithm vs. A* Algorithm: https://stackabuse.com/dijkstras-algorithm-vs-a-algorithm/
+Dijkstra vs. A* – Pathfinding: https://www.baeldung.com/cs/dijkstra-vs-a-pathfinding
