@@ -6,6 +6,20 @@ All codes in this folder are linked with this isse: https://github.com/chuangyu-
 
 and coding must work on this pull request: https://github.com/chuangyu-hscy/refactored-octo-potato/pull/6
 
+## Short summary about the A*
+
+The goal of this algorithm is to find the shortest path from point A (start point) to point B (end point).
+
+The main difference between Djistra and A* is we provide a heuristic function to guide the algorithm to the next best direction.
+
+**Notations**
+- Open Set => A priority queue which contains the items which we need to expand next
+
+- G(n) => The current shortest distance from the start node to the current node
+- H(n) => Heuristic function, distance of a node A to a node B using absolutely distance like eculidean or manhatten 
+- F(n) => addition of G and H :: F(n) = G(n) + H(n)
+
+
 ## Djistra
 
 **Two assumptions**
