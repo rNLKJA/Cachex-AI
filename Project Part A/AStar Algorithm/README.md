@@ -6,7 +6,6 @@ All codes in this folder are linked with this isse: https://github.com/chuangyu-
 
 and coding must work on this pull request: https://github.com/chuangyu-hscy/refactored-octo-potato/pull/6
 
-
 ## Djistra
 
 **Two assumptions**
@@ -23,5 +22,6 @@ The two assumptions ensure that Dijkstra always terminates and returns either th
 
 ## Reference
 
-Dijkstra's Algorithm vs. A* Algorithm: https://stackabuse.com/dijkstras-algorithm-vs-a-algorithm/
-Dijkstra vs. A* – Pathfinding: https://www.baeldung.com/cs/dijkstra-vs-a-pathfinding
+- Dijkstra's Algorithm vs. A* Algorithm: https://stackabuse.com/dijkstras-algorithm-vs-a-algorithm/
+
+- Dijkstra vs. A* – Pathfinding: https://www.baeldung.com/cs/dijkstra-vs-a-pathfinding
