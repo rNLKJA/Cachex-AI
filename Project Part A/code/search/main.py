@@ -15,12 +15,14 @@ import json
 from search.util import print_board, print_coordinate
 
 def main():
-    try:
-        with open(sys.argv[1]) as file:
-            data = json.load(file)
+	try:
+		with open(sys.argv[1]) as file:
+			data = json.load(file)
     except IndexError:
         print("usage: python3 -m search path/to/input.json", file=sys.stderr)
         sys.exit(1)
+
+    
 
     # TODO:
     # Find and print a solution to the board configuration described
