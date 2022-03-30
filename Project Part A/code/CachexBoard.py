@@ -153,86 +153,78 @@ class CachexBoard:
         message.append("--------------------------------------------------")
         return sep.join(message)
     
-    def AStar(self, start, goal, heuristic='manhatten', p=None):
+    def AStar(self, start=None, goal=None, heuristic='manhatten', p=None):
+        """
+        A* Path finding algorithm implementation
+        """
+        
+        if start is None or goal is None:
+            start, goal = self.start, self.goal
+            
+        
         # A* initial state validation 
         if start not in self.NodeDict or goal not in self.NodeDict or \
             start in self.barriers or goal in self.barriers:
             raise InvalidSearchPointError(self)
-            
-        if start == goal:
-            return {'step': 1, 'path': [goal, start]}
         
-        # sample queue item structure
-        # [f-score, g-score, h-score, currentNode, lastNode]
+        # obtain distance calculation function from HexNode object
+        distance_diff = self.NodeDict[start].distance_diff
+        
+        # define the required priorityQueue, g_score, f_score, h_score
         priorityQueue = PriorityQueue()
-        priorityQueue.put([0, 0, self.NodeDict[start].distance_diff(point1=start, 
-                                                                    point2=goal, 
-                                                                    heuristic=heuristic, 
-                                                                    p=p), start, None])
-        
-        
-   
-        expandedNodes = set()
-    
-        i = 0
-        while True:
-            # expand the current node
-            currentNode = priorityQueue.get()
-            print(currentNode)
-            time.sleep(1)
-            if currentNode[3] == goal:
-                print(currentNode[3])
-                break
+        g_score = {node: float('inf') for node in board.NodeDict.keys() if board.NodeDict[node].state is None} 
+        f_score = {node: float('inf') for node in board.NodeDict.keys() if board.NodeDict[node].state is None}
+           
+        # store explored nodes
+        # explored: {node: last-position}
+        # queueTracker: set(explored queue)
+        explored, queueTracker, order, path = dict(), {start}, 0, []     
 
-            for nextNode in self.NodeDict[currentNode[3]].next:
-                
-                # only process the node position has an attribute None
-                # None means the space is open
+        # initialise the start node (f-score, insert-order, position)
+        priorityQueue.put([0, order, start])
+
+        # initialise the start state with cost 0 and 
+        # distance difference based on given heuristic function
+        g_score[start], f_score[start] = 0, distance_diff(point1=start,
+                                                          point2=goal,
+                                                          heuristic=heuristic,
+                                                          p=p)
+
+        # find the path until priorityQueue is empty
+        while not priorityQueue.empty(): 
+            # currentNode = [f-score, insert-order, position][2]
+            # pop out the first element in the queue and delete item in queueTracker
+            currentNode = priorityQueue.get()[2]
+            queueTracker.remove(currentNode)
+            
+            # if currentNode react the target goal, return path
+            if currentNode == goal:
+                while currentNode in explored:
+                    currentNode = explored[currentNode]
+                    path.append(currentNode)
+                path.insert(0, goal)
+                return path[::-1]
+            
+            
+            # check state for next expanding nodes
+            for nextNode in self.NodeDict[currentNode].next:
+                # ignore node which node state is not empty
                 if self.NodeDict[nextNode].state is None:
-                    # if next node never explored
-                    if nextNode not in expandedNodes:
-                        # put an expandNode target in priorityQueue
-                        expandNode = [0, # f-score 0
-                                      currentNode[1] + 1, # g-score 1 
-                                      self.NodeDict[nextNode].distance_diff(point1=nextNode,
-                                                                            point2=goal,
-                                                                            heuristic=heuristic,
-                                                                            p=p), # h-score 2
-                                      nextNode, # position 3 
-                                      currentNode[-2]] # last 4
-                        # calculate f-score
-                        expandNode[0] = expandNode[1] + expandNode[2] 
-
-                        # update priority Queue
-                        # update expandedNodes set
-                        priorityQueue.put(expandNode)
-                        expandedNodes.add(nextNode)
-                    elif nextNode in expandedNodes:
-                        print(nextNode in expandedNodes)
-                        break
-                        pq = copy.copy(priorityQueue)
-                        while not pq.empty():
-                            qitem = pq.get()
-                            # if nextNode in priorityQueue and 
-                            # nextNode cost is greater than current cost + 1
-                            # update the nextNode with a new lowest cost
-                            if qitem[3] == nextNode and qitem[1] > currentNode[1] + 1:
-                                qitem[1] = currentNode[1] + 1 # update g-score
-                                qitem[0] = qitem[1] + qitem[2] # update f-score
-                                qitem[4] = currentNode[3]
-                                priorityQueue.put(qitem)
-                            else:
-                                pass
-                else:
+                    # update path if cost is lower than previous one
+                    if g_score[currentNode] + 1 < g_score[nextNode]:
+                        g_score[nextNode] = g_score[currentNode] + 1
+                        f_score[nextNode] = f_score[currentNode] + distance_diff(point1=nextNode,
+                                                                                 point2=goal,
+                                                                                 heuristic=heuristic,
+                                                                                 p=p)
+                        explored[nextNode] = currentNode # update path history
+                        # if no update on cost, generate a queue item and put it in priority queue
+                        if nextNode not in queueTracker:
+                            order += 1
+                            priorityQueue.put([f_score[nextNode], order, nextNode])
+                            queueTracker.add(nextNode)
+                else: 
                     pass
         
-            if i == 10:
-                break
-            else:
-                i+=1
-                
-                
-        print('----end----')
-
-        
-    
+        # if path is blocked, return empty list
+        return []
