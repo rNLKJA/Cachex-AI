@@ -1,6 +1,25 @@
+# import required modules
+import sys
+import os
+from queue import PriorityQueue
+
+# directory reach
+current = os.path.dirname(os.path.realpath(__file__))
+
+# setting path
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
+# import custom modules
+from astar.AStarScore import AStarScore
+from Cachex.HexNode import HexNode
+from constant.constant import *
+from error.error import *
+from search.util import *
+
 class CachexBoard:
     """
-    Cachex Game object functions, a CachexBoard object should initialised with a 
+    Cachex Game object functions, a CachexBoard object should initialized with a 
     dictionary which contains board data:
     
     For example:
@@ -40,19 +59,22 @@ class CachexBoard:
         self.construct_board(self.n)
         self.construct_node_dict()
         self.obtain_barrier_coord()
+        
+    def __repr__(self):
+        return f"Cachex Board Object n: 5"
     
     def construct_board(self, n: int, inplace=True):
         """
         The function will return all valid hexagon cell coordinates in a single
         set
         input: n: int # number of the board size
-        return: board: set # a set of all possilble moves
+        return: board: set # a set of all possible moves
         """
         self.board = set()
 
         # construct cachex board
-        for r in range(BOARD_DATA['n']):
-            for q in range(BOARD_DATA['n']):
+        for r in range(self.n):
+            for q in range(self.n):
                 self.board.add((r, q))
         if not inplace:
             return board
@@ -83,7 +105,7 @@ class CachexBoard:
         self.barriers = set()
         
         for node in self.data['board']:
-            if node[0] is 'b':
+            if node[0] == 'b':
                 self.NodeDict[(node[1], node[2])].state = BLOCK
                 self.barriers.add((node[1], node[2]))
                 
@@ -106,11 +128,11 @@ class CachexBoard:
         # therefore update path_dict by board_dict where board_dict
         # will rewrite start and goal with their unique symbol
         board_dict = {**path_dict, **board_dict}
-       
+
         if path:
             # define the message
             message = self.message(path)
-                          
+
             # print game board
             print_board(n=self.n, board_dict=board_dict, message=message)
         else:
@@ -123,31 +145,27 @@ class CachexBoard:
         Message generator for display function
         """
         message = ["2022 COMP30024 Artificial Intelligence Cachex Game",
-                   f"                       Group 4399 S Huang, W, Zhao",
-                   "--------------------------------------------------",
-                   "Symbol Representation:",
-                   "- Δ: AStar Search Start Point",
-                   "- $: AStar Search End/Goal Point",
-                   "- #: Barriers, node cannot place at here",
-                   f"- [1-{len(path)}]: AStar Path Result",
-                   "--------------------------------------------------",
-                   f"Board Information: Start: {self.start} >>> End: {self.goal}"]
+                    f"                       Group 4399 S Huang, W, Zhao",
+                    "--------------------------------------------------",
+                    "Symbol Representation:",
+                    "- Δ: AStar Search Start Point",
+                    "- $: AStar Search End/Goal Point",
+                    "- #: Barriers, node cannot place at here",
+                    f"- [1-{len(path)}]: AStar Path Result",
+                    "--------------------------------------------------",
+                    f"Board Information: Start: {self.start} >>> End: {self.goal}"]
+        
+        # if a valid path has been found
         if path is not None:
-            message.append(f"- AStar Path Length: {len(path)}")
+            message.append(f"- A* Path Length: {len(path)}")
             message.append("--------------------------------------------------")
-            message.append("AStar Path:")
+            message.append("A* Search Path:")
             
-            path_str = ""
-            for i, p in enumerate(path):
-                if i == 0 or i % 4 != 0:
-                    if p == self.start:
-                        path_str += 'Start -> '
-                    elif p == path[-1]:
-                        path_str += "Goal"
-                    else:
-                        path_str += str(p) + ' -> '
-                else:
-                    path_str += str(p) + ' ->\n'
+            # define the path string
+            path_str = "Start -> \n"
+            for p in path[1::]:
+                path_str += f"{p} -> \n"
+            path_str += "Goal"
             message.append(path_str)
                         
         message.append("--------------------------------------------------")
@@ -156,11 +174,11 @@ class CachexBoard:
     def AStar(self, start=None, goal=None, heuristic='manhatten', p=None):
         """
         A* Path finding algorithm implementation
+        if path not found, return an empty list
         """
         
         if start is None or goal is None:
             start, goal = self.start, self.goal
-            
         
         # A* initial state validation 
         if start not in self.NodeDict or goal not in self.NodeDict or \
@@ -172,9 +190,8 @@ class CachexBoard:
         
         # define the required priorityQueue, g_score, f_score, h_score
         priorityQueue = PriorityQueue()
-        g_score = {node: float('inf') for node in board.NodeDict.keys() if board.NodeDict[node].state is None} 
-        f_score = {node: float('inf') for node in board.NodeDict.keys() if board.NodeDict[node].state is None}
-           
+        AStarScores = {node: AStarScore() for node in self.NodeDict.keys() if self.NodeDict[node].state is None}
+
         # store explored nodes
         # explored: {node: last-position}
         # queueTracker: set(explored queue)
@@ -185,11 +202,10 @@ class CachexBoard:
 
         # initialise the start state with cost 0 and 
         # distance difference based on given heuristic function
-        g_score[start], f_score[start] = 0, distance_diff(point1=start,
-                                                          point2=goal,
-                                                          heuristic=heuristic,
-                                                          p=p)
-
+        AStarScores[start].g = 0
+        AStarScores[start].h = distance_diff(point1=start, point2=goal, 
+                                            heuristic=heuristic, p=p)
+        
         # find the path until priorityQueue is empty
         while not priorityQueue.empty(): 
             # currentNode = [f-score, insert-order, position][2]
@@ -211,17 +227,17 @@ class CachexBoard:
                 # ignore node which node state is not empty
                 if self.NodeDict[nextNode].state is None:
                     # update path if cost is lower than previous one
-                    if g_score[currentNode] + 1 < g_score[nextNode]:
-                        g_score[nextNode] = g_score[currentNode] + 1
-                        f_score[nextNode] = f_score[currentNode] + distance_diff(point1=nextNode,
-                                                                                 point2=goal,
-                                                                                 heuristic=heuristic,
-                                                                                 p=p)
+                    if AStarScores[currentNode].g + 1 < AStarScores[nextNode].g:
+                        AStarScores[nextNode].g = AStarScores[currentNode].g + 1
+                        AStarScores[nextNode].h = distance_diff(point1=nextNode, point2=goal,
+                                                                heuristic=heuristic, p=p)
+                        AStarScores[nextNode].update_f()
+                        
                         explored[nextNode] = currentNode # update path history
                         # if no update on cost, generate a queue item and put it in priority queue
                         if nextNode not in queueTracker:
                             order += 1
-                            priorityQueue.put([f_score[nextNode], order, nextNode])
+                            priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
                             queueTracker.add(nextNode)
                 else: 
                     pass

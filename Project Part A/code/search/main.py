@@ -12,21 +12,37 @@ import json
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
-from search.util import print_board, print_coordinate
+
+from Cachex.CachexBoard import CachexBoard
+
 
 def main():
-	try:
-		with open(sys.argv[1]) as file:
-			data = json.load(file)
+    """
+    Project Part A main code
+    """
+
+    try:
+        with open(sys.argv[1]) as file:
+            data = json.load(file)
+        
+        # construct CachexBoard object
+        board = CachexBoard(data)
+        
+        # find a path using A* search algorithm
+        # if no path found return an empty path
+        # create path_dict
+        path = board.AStar(start=board.start, 
+                        goal=board.goal,
+                        heuristic='manhatten', p=None)
+        
+        # standard out the output
+        print(len(path))
+        if path:
+            for p in path:
+                print(p)
+        
+        
     except IndexError:
-        print("usage: python3 -m search path/to/input.json", file=sys.stderr)
-        sys.exit(1)
-
+            print("usage: python3 -m search path/to/input.json", file=sys.stderr)
+    sys.exit(1)
     
-
-    # TODO:
-    # Find and print a solution to the board configuration described
-    # by `data`.
-    # Why not start by trying to print this configuration out using the
-    # `print_board` helper function? (See the `util.py` source code for
-    # usage information).

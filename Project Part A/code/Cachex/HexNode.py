@@ -1,3 +1,17 @@
+# import required modules
+import sys
+import os
+
+# directory reach
+current = os.path.dirname(os.path.realpath(__file__))
+
+# setting path
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
+from Cachex import CachexBoard
+from error.error import *
+
 # define the node class
 class HexNode:
     """
@@ -19,7 +33,10 @@ class HexNode:
         if state not in ['Red', 'Blue', 'Block', None]:
             raise InvalidNodeStateError
             
-        self.state = None # state could be Red, Blue, Block or None
+        self.state = state # state could be Red, Blue, Block or None
+        
+    def __repr__(self):
+        return f"HexNode {self.coord} - state: {self.state}"
         
     def summary(self):
         """
@@ -44,11 +61,11 @@ class HexNode:
             raise InvalidHeuristicError
         
         # calculate the distance with the given heuristic distance formula
-        if heuristic is 'euclidean':
+        if heuristic == 'euclidean':
             return self.minkowski(point1, point2, 2)
-        elif heuristic is 'manhatten':
+        elif heuristic == 'manhatten':
             return self.minkowski(point1, point2, 1)
-        elif heuristic is 'minkowski':
+        elif heuristic == 'minkowski':
             return self.minkowski(point1, point2, p)
     
     def minkowski(self, point1: tuple, point2: tuple, p:int):
@@ -63,12 +80,12 @@ class HexNode:
     
     def find_next_moves(self, board: CachexBoard, inplace=True, verbose=0):
         """
-        Through obversation, if turn the Cachex game board from a hexagon 2D layout to a rectangle grid
+        Through observation, if turn the Cachex game board from a hexagon 2D layout to a rectangle grid
         layout, a node could move in six directions except a node cannot move along the major axis.
         
         Hence for each point:
-        1. check all posible moves
-        2. check moves are vaild (in board)
+        1. check all possible moves
+        2. check moves are valid (in board)
         3. return a result list
         
         board: set # game board coordinates information to check a move is valid or not
