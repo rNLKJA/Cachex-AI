@@ -13,7 +13,7 @@ import json
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
 
-from Cachex.CachexBoard import CachexBoard
+from cachex.CachexBoard import CachexBoard
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
         # create path_dict
         path = board.AStar(start=board.start, 
                         goal=board.goal,
-                        heuristic='manhatten', p=None)
+                        heuristic='manhattan', p=None)
         
         # standard out the output
         print(len(path))
