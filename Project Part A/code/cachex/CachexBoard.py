@@ -59,7 +59,7 @@ class CachexBoard:
         self.construct_node_dict()
         
     def __repr__(self):
-        return f"Cachex Board Object n: 5"
+        return f"Cachex Board Object n: {self.n}"
     
     def construct_board(self, n: int, inplace=True):
         """
