@@ -49,7 +49,7 @@ class HexNode:
         print("=====================================================================")
         
         
-    def distance_diff(self, point1: tuple, point2: tuple, heuristic='manhatten', p=None):
+    def distance_diff(self, point1: tuple, point2: tuple, heuristic='manhattan', p=None):
         """
         Calculate the distance between current node and the target hexagon cell using
         given heuristic distance function
@@ -57,13 +57,13 @@ class HexNode:
         heuristic must be one of the following distance formula:
         ['euclidean', 'manhatten', 'hamming']
         """
-        if heuristic not in ['euclidean', 'manhatten', 'minkowski']:
+        if heuristic not in ['euclidean', 'manhattan', 'minkowski']:
             raise InvalidHeuristicError
         
         # calculate the distance with the given heuristic distance formula
         if heuristic == 'euclidean':
             return self.minkowski(point1, point2, 2)
-        elif heuristic == 'manhatten':
+        elif heuristic == 'manhattan':
             return self.minkowski(point1, point2, 1)
         elif heuristic == 'minkowski':
             return self.minkowski(point1, point2, p)

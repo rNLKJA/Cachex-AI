@@ -171,7 +171,7 @@ class CachexBoard:
         message.append("--------------------------------------------------")
         return sep.join(message)
     
-    def AStar(self, start=None, goal=None, heuristic='manhatten', p=None):
+    def AStar(self, start=None, goal=None, heuristic='manhattan', p=None):
         """
         A* Path finding algorithm implementation
         if path not found, return an empty list
