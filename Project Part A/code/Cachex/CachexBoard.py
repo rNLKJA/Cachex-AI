@@ -39,7 +39,6 @@ class CachexBoard:
     - board.data: restore board data
     - board.NodeDict: dictionary object contain each node information
     - board.board: game board layout
-    - board.barriers: barriers on the board
     - board.display: print the current board
     """
     def __init__(self, data):
