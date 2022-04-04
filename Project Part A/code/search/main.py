@@ -36,7 +36,7 @@ def main():
                 block = RED
             elif str.title(sys.argv[2]) == BLUE:
                 block = BLUE
-        
+
         # construct CachexBoard object
         board = CachexBoard(data)
         
@@ -54,8 +54,9 @@ def main():
         if path:
             for p in path:
                 print(p)
-                
-        board.display(path)
+        
+				# display the board
+        # board.display(path)
         
         
     except IndexError:
