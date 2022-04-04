@@ -12,10 +12,10 @@ import json
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
+from search.util import print_coordinate
 
 from cachex.CachexBoard import CachexBoard
 from constant.constant import *
-
 
 def main():
     """
@@ -52,12 +52,11 @@ def main():
         # standard out the output
         print(len(path))
         if path:
-            for p in path:
-                print(p)
+            for r, q in path:
+                print_coordinate(r, q)
         
-				# display the board
+        # display the board
         # board.display(path)
-        
         
     except IndexError:
             print("usage: python3 -m search path/to/input.json", file=sys.stderr)

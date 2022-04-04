@@ -100,7 +100,11 @@ class CachexBoard:
                 if str.lower(node[0]) == 'r':
                     self.NodeDict[(node[1], node[2])].state = RED
                 elif str.lower(node[0]) == 'b':
-                    self.NodeDict[(node[1], node[2])].state = BLUE    
+                    self.NodeDict[(node[1], node[2])].state = BLUE   
+                else:
+                    pass
+        else:
+            pass 
                 
     def display(self, path=None):
         """
@@ -175,7 +179,6 @@ class CachexBoard:
         A* Path finding algorithm implementation
         if path not found, return an empty list
         """
-        
         if start is None or goal is None:
             start, goal = self.start, self.goal
         
@@ -226,10 +229,8 @@ class CachexBoard:
                 path.insert(0, goal)
                 return path[::-1]
             
-            
             # check state for next expanding nodes
             for nextNode in self.NodeDict[currentNode].next:
-                
                 # if block specified, e.g. Blue tiles are placed now red need to find a shortest path
                 # now all blocks are made by blue tiles, red could use existing tiles to construct
                 # an optimal path
@@ -266,6 +267,12 @@ class CachexBoard:
                             order += 1
                             priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
                             queueTracker.add(nextNode)
+                        else:
+                            pass
+                    else: 
+                        pass
+                else:
+                    pass
         
         # if path is blocked, return empty list
         return []
