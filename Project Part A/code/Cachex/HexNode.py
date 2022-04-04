@@ -30,13 +30,13 @@ class HexNode:
         else:
             self.next = set()
         
-        if state not in ['Red', 'Blue', 'Block', None]:
+        if state not in ['Red', 'Blue', None]:
             raise InvalidNodeStateError
             
         self.state = state # state could be Red, Blue, Block or None
         
     def __repr__(self):
-        return f"HexNode {self.coord} - state: {self.state}"
+        return f"HexNode {self.coord} - state: {self.state}\n"
         
     def summary(self):
         """

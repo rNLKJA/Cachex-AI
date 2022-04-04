@@ -14,4 +14,4 @@ class AStarScore:
         self.f = self.g + self.h
         
     def __repr__(self):
-        return f"f(n): {self.f}, g(n): {self.g}, h(n): {self.h}"
+        return f"f(n): {self.f}, g(n): {self.g}, h(n): {self.h}\n"

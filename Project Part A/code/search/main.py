@@ -14,6 +14,7 @@ import json
 # then import from them like this:
 
 from cachex.CachexBoard import CachexBoard
+from constant.constant import *
 
 
 def main():
@@ -24,6 +25,17 @@ def main():
     try:
         with open(sys.argv[1]) as file:
             data = json.load(file)
+            
+        # allow user to define the block type
+        # block means the tile that AStar cannot explore
+        # e.g. block type could be red or blue
+        # if no block type given then return None
+        block = None
+        if len(sys.argv) > 2:
+            if str.title(sys.argv[2]) == RED:
+                block = RED
+            elif str.title(sys.argv[2]) == BLUE:
+                block = BLUE
         
         # construct CachexBoard object
         board = CachexBoard(data)
@@ -33,13 +45,17 @@ def main():
         # create path_dict
         path = board.AStar(start=board.start, 
                         goal=board.goal,
-                        heuristic='manhattan', p=None)
+                        heuristic='euclidean', 
+                        p=None,
+                        block=block)
         
         # standard out the output
         print(len(path))
         if path:
             for p in path:
                 print(p)
+                
+        board.display(path)
         
         
     except IndexError:

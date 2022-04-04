@@ -58,7 +58,6 @@ class CachexBoard:
         
         self.construct_board(self.n)
         self.construct_node_dict()
-        self.obtain_barrier_coord()
         
     def __repr__(self):
         return f"Cachex Board Object n: 5"
@@ -96,18 +95,13 @@ class CachexBoard:
             # check node is barrier or not
             self.NodeDict[node] = HexNode(node)
             self.NodeDict[node].find_next_moves(self.board)
-    
-    def obtain_barrier_coord(self):
-        """
-        Read board data from the json dictionary.
-        if a node has a letter 'b' at the position 0, then it is a barrier
-        """
-        self.barriers = set()
-        
-        for node in self.data['board']:
-            if node[0] == 'b':
-                self.NodeDict[(node[1], node[2])].state = BLOCK
-                self.barriers.add((node[1], node[2]))
+            
+        if self.data['board']:
+            for node in self.data['board']:
+                if str.lower(node[0]) == 'r':
+                    self.NodeDict[(node[1], node[2])].state = RED
+                elif str.lower(node[0]) == 'b':
+                    self.NodeDict[(node[1], node[2])].state = BLUE    
                 
     def display(self, path=None):
         """
@@ -119,15 +113,20 @@ class CachexBoard:
             for i, p in enumerate(path):
                 path_dict[p] = i + 1 
             
-        board_dict = {self.start: 'Δ', self.goal: '$'}
-        for barrier in self.barriers:
-            board_dict[barrier] = '#'
+        board_dict = dict()
+        for key, node in self.NodeDict.items():
+            if node.state == BLUE:
+                board_dict[key] = 'b'
+            elif node.state == RED:
+                board_dict[key] = 'r'
         
         # merge path_dict and board_dict into a single dict
         # note: path_dict only contain the path info include start and goal
         # therefore update path_dict by board_dict where board_dict
         # will rewrite start and goal with their unique symbol
-        board_dict = {**path_dict, **board_dict}
+        board_dict = {**board_dict, **path_dict}
+        board_dict[self.start] = 'Δ' 
+        board_dict[self.goal] = '$' 
 
         if path:
             # define the message
@@ -150,7 +149,8 @@ class CachexBoard:
                     "Symbol Representation:",
                     "- Δ: AStar Search Start Point",
                     "- $: AStar Search End/Goal Point",
-                    "- #: Barriers, node cannot place at here",
+                    "- B: Blue Tiles",
+                    "- R: Red Tiles",
                     f"- [1-{len(path)}]: AStar Path Result",
                     "--------------------------------------------------",
                     f"Board Information: Start: {self.start} >>> End: {self.goal}"]
@@ -171,7 +171,7 @@ class CachexBoard:
         message.append("--------------------------------------------------")
         return sep.join(message)
     
-    def AStar(self, start=None, goal=None, heuristic='manhattan', p=None):
+    def AStar(self, start=None, goal=None, heuristic='manhattan', p=None, block=None):
         """
         A* Path finding algorithm implementation
         if path not found, return an empty list
@@ -181,8 +181,7 @@ class CachexBoard:
             start, goal = self.start, self.goal
         
         # A* initial state validation 
-        if start not in self.NodeDict or goal not in self.NodeDict or \
-            start in self.barriers or goal in self.barriers:
+        if start not in self.NodeDict or goal not in self.NodeDict:
             raise InvalidSearchPointError(self)
         
         # obtain distance calculation function from HexNode object
@@ -190,8 +189,15 @@ class CachexBoard:
         
         # define the required priorityQueue, g_score, f_score, h_score
         priorityQueue = PriorityQueue()
-        AStarScores = {node: AStarScore() for node in self.NodeDict.keys() if self.NodeDict[node].state is None}
-
+        AStarScores = dict()
+        
+        for node_key in self.NodeDict.keys():
+            if block is not None:
+                AStarScores[node_key] = AStarScore()
+            else:
+                if self.NodeDict[node_key].state is None:
+                    AStarScores[node_key] = AStarScore()
+        
         # store explored nodes
         # explored: {node: last-position}
         # queueTracker: set(explored queue)
@@ -224,8 +230,30 @@ class CachexBoard:
             
             # check state for next expanding nodes
             for nextNode in self.NodeDict[currentNode].next:
-                # ignore node which node state is not empty
-                if self.NodeDict[nextNode].state is None:
+                
+                # if block specified, e.g. Blue tiles are placed now red need to find a shortest path
+                # now all blocks are made by blue tiles, red could use existing tiles to construct
+                # an optimal path
+                if block is not None:
+                    if self.NodeDict[nextNode].state != block:
+                        # update path if cost is lower than previous one
+                        if AStarScores[currentNode].g + 1 < AStarScores[nextNode].g:
+                            AStarScores[nextNode].g = AStarScores[currentNode].g + 1
+                            AStarScores[nextNode].h = distance_diff(point1=nextNode, point2=goal,
+                                                                    heuristic=heuristic, p=p)
+                            AStarScores[nextNode].update_f()
+                            
+                            explored[nextNode] = currentNode # update path history
+                            # if no update on cost, generate a queue item and put it in priority queue
+                            if nextNode not in queueTracker:
+                                order += 1
+                                priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
+                                queueTracker.add(nextNode)
+                    else: 
+                        pass
+                    
+                # if no blocks are given, find a path from start to end
+                elif self.NodeDict[nextNode].state is None:
                     # update path if cost is lower than previous one
                     if AStarScores[currentNode].g + 1 < AStarScores[nextNode].g:
                         AStarScores[nextNode].g = AStarScores[currentNode].g + 1
@@ -239,8 +267,6 @@ class CachexBoard:
                             order += 1
                             priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
                             queueTracker.add(nextNode)
-                else: 
-                    pass
         
         # if path is blocked, return empty list
         return []
