@@ -12,7 +12,7 @@ sys.path.append(parent)
 
 # import custom modules
 from astar.AStarScore import AStarScore
-from Cachex.HexNode import HexNode
+from cachex.HexNode import HexNode
 from constant.constant import *
 from error.error import *
 from search.util import *

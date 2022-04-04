@@ -9,7 +9,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
-from Cachex import CachexBoard
+from cachex import CachexBoard
 from error.error import *
 
 # define the node class
