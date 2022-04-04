@@ -11,7 +11,7 @@ class InvalidHeuristicError(Error):
     ['euclidean', 'manhatten', 'hamming']
     """
     def __init__(self):
-        self.message = "Heuristic function must be one of the following distance formula: ['euclidean', 'manhatten', 'minkowski']"
+        self.message = "Heuristic function must be one of the following distance formula: ['euclidean', 'manhattan', 'hamming']"
         super().__init__(self.message)
         
 class InvalidNodeStateError(Error):
@@ -21,7 +21,7 @@ class InvalidNodeStateError(Error):
     """
     
     def __init__(self):
-        self.message = "Node only have three possible state status: ['Red', 'Blue', None]"
+        self.message = "Node only have four possible state status: ['Red', 'Blue', 'Block', None]"
         super().__init__(self.message)
         
 class InvalidSearchPointError(Error):
