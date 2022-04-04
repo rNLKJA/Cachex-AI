@@ -12,6 +12,19 @@ The aims for Project Part A is build a agent that:
 - explore algorithms learned in lecture
 - familiar with Cachex
 
+```bash
+# to run the AStar search script, please enter the code directory and run the following command
+# python -m search input.json [block-type]
+# [block-type could be None, Red, or Blue], if None then skip this field
+# e.g. where search block-type is None
+python -m search sample_input.json 
+
+# e.g. where search block-type is Blue
+python -m search sample_input.json Blue
+```
+
+- familiar with Cache
+
 ## Project Part B: Competitive Game Agent
 
 ## _Cache_ Game
@@ -50,12 +63,12 @@ python3 main.py
 
 ## A\* Search vs. Djistra Search
 
-## Project Tasks Tracking
+## Project Part A Progress Tracking
 
 - [x] Find a group partner [@EcZww](https://github.com/EcZww)
-- [ ] Understand A\* heuristic algorithm
-- [ ] Path finding strategy design
-- [ ] Code tasks
+- [x] Understand A\* heuristic algorithm
+- [x] Path finding strategy design
+- [x] Code tasks
 - [ ] Report writing
 - [ ] Complete states check
 - [ ] Final Code & Report Submission
