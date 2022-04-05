@@ -203,10 +203,10 @@ class CachexBoard:
         # store explored nodes
         # explored: {node: last-position}
         # queueTracker: set(explored queue)
-        explored, queueTracker, order, path = dict(), {start}, 0, []     
+        explored, queueTracker, insert_order, path = dict(), {start}, 0, []     
 
-        # initialise the start node (f-score, insert-order, position)
-        priorityQueue.put([0, order, start])
+        # initialise the start node (f-score, insert-insert_order, position)
+        priorityQueue.put([0, insert_order, start])
 
         # initialise the start state with cost 0 and 
         # distance difference based on given heuristic function
@@ -216,7 +216,7 @@ class CachexBoard:
         
         # find the path until priorityQueue is empty
         while not priorityQueue.empty(): 
-            # currentNode = [f-score, insert-order, position][2]
+            # currentNode = [f-score, insert-insert_order, position][2]
             # pop out the first element in the queue and delete item in queueTracker
             currentNode = priorityQueue.get()[2]
             queueTracker.remove(currentNode)
@@ -246,8 +246,8 @@ class CachexBoard:
                             explored[nextNode] = currentNode # update path history
                             # if no update on cost, generate a queue item and put it in priority queue
                             if nextNode not in queueTracker:
-                                order += 1
-                                priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
+                                insert_order += 1
+                                priorityQueue.put([AStarScores[nextNode].f, insert_order, nextNode])
                                 queueTracker.add(nextNode)
                     else: 
                         pass
@@ -264,8 +264,8 @@ class CachexBoard:
                         explored[nextNode] = currentNode # update path history
                         # if no update on cost, generate a queue item and put it in priority queue
                         if nextNode not in queueTracker:
-                            order += 1
-                            priorityQueue.put([AStarScores[nextNode].f, order, nextNode])
+                            insert_order += 1
+                            priorityQueue.put([AStarScores[nextNode].f, insert_order, nextNode])
                             queueTracker.add(nextNode)
                         else:
                             pass
