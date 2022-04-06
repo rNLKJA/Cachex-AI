@@ -69,9 +69,9 @@ python3 main.py
 - [x] Understand A\* heuristic algorithm
 - [x] Path finding strategy design
 - [x] Code tasks
-- [ ] Report writing
-- [ ] Complete states check
-- [ ] Final Code & Report Submission
+- [x] Report writing
+- [x] Complete states check
+- [x] Final Code & Report Submission
 
 ## Project Part A Breif Report
 
