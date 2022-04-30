@@ -59,11 +59,8 @@ conda activate COMP30024
 python3 main.py
 ```
 
-## A\* Search Algorithm
-
-## A\* Search vs. Djistra Search
-
-## Project Part A Progress Tracking
+## Project Progress Tracking
+### Part A Progress Tracking
 
 - [x] Find a group partner [@EcZww](https://github.com/EcZww)
 - [x] Understand A\* heuristic algorithm
@@ -73,11 +70,14 @@ python3 main.py
 - [x] Complete states check
 - [x] Final Code & Report Submission
 
-## Project Part A Breif Report
+### Part B Progress Tracking
+
+## Project Report
+### Part A Breif Report
 
 https://www.overleaf.com/project/6243b9d1f6268a970c497d1f
 
-## Project Part B Brief Report
+### Project Part B Brief Report
 
 ## Others
 
