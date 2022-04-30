@@ -75,6 +75,8 @@ python3 main.py
 
 ## Project Part A Breif Report
 
+https://www.overleaf.com/project/6243b9d1f6268a970c497d1f
+
 ## Project Part B Brief Report
 
 ## Others
