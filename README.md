@@ -39,7 +39,7 @@ Hence authors using conda to build the working environment.
 ```bash
 # please check the conda_env.txt file and requirements.txt file does exist
 # create conda environment
-conda create -n COMP30024 --file conda.env.txt
+conda create -n COMP30024 --file environment.yml
 
 # after set up conda environment, please install package dependencies
 pip install -r requirements.txt
@@ -60,7 +60,7 @@ python3 main.py
 ```
 
 ## Project Progress Tracking
-### Part A Progress Tracking
+<!-- ### Part A Progress Tracking
 
 - [x] Find a group partner [@EcZww](https://github.com/EcZww)
 - [x] Understand A\* heuristic algorithm
@@ -68,7 +68,7 @@ python3 main.py
 - [x] Code tasks
 - [x] Report writing
 - [x] Complete states check
-- [x] Final Code & Report Submission
+- [x] Final Code & Report Submission -->
 
 ### Part B Progress Tracking
 
