@@ -27,6 +27,21 @@ python -m search sample_input.json Blue
 
 ## Project Part B: Competitive Game Agent
 
+The team need to design and implement a program to play the game of Cachex. That is, given information about the evolving state of the game.
+- Opponents who choose randomly from their set of allowed actions each turn.
+- "Greedy" opponents who select the most immediately promising action available each turn, without considering your player's responses (for various definitions of 'most promising').
+- Opponents using the adversarial search techniques discussed in class and a simpple evaluation function to look an increasing number of turns ahead.
+
+```bash
+# to run the game agent, please enter the following command
+python -m referee <n> <player1> <player2>
+
+# e.g. human player vs. random selection agent with a board size n=5
+python -m referee 5 human_player random_play_agent
+
+# for more information about referee please check the helper function via -h or --help
+```
+
 ## _Cache_ Game
 
 Cachex is a perfect-information two-player game played on an n×nrhombic, hexagonally tiled board, based on the strategy game Hex. Two players (named Red and Blue) compete, with the goal to form a connection between the opposing sides of the board corresponding to their respective color. More information please check **[AI_chachex_spec.pdf]("https://github.com/chuangyu-hscy/legendary-succotash/blob/master/COMP30024%20Project/COMP30024%20Project%20Part%20A/specification/AI_cachex_spec.pdf")**.
