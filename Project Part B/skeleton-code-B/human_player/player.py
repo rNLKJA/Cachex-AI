@@ -38,24 +38,31 @@ class Player:
         """
         
         # put your code here
-        # TODO: check steal action if self._turn == 2
+        # check steal action if self._turn == 2
         if self._turn == 2:
             if input("| Do you want to steal the tile? [Y/n]").lower() in ['yes', 'y']:
                 return (STEAL,)
         
         print("| Please enter a coordinate tuple which separate by space, no bracket needed\n| E.g. 0 0, this represents that you will put a hexagon tile on coord (0, 0)")
         coord = input('| Please enter your coordinate: ')
-        r, q = tuple(int(i) for i in coord.split())
         
-        # TODO: validate the first move, cannot place at the center if a board has a odd number dimension
-        if self._turn == 1 and self.n % 2 == 1:
-            while (r, q) == (self.n // 2, self.n // 2):
-                coord = input(f'| Cannot place the first move at the middle of the board {(self.n//2, self.n//2)}!\n| Please try again: ')
+        # assign magic numbers, -1 denotes invalid position
+        r, q = -1, -1
+        
+        while (r, q) == (-1, -1):
+            try:
                 r, q = tuple(int(i) for i in coord.split())
+            except ValueError:
+                print("| The input must strictly follow the format r q, e.g. 0 0")
+                coord = input("| Please try again: ")
+            # validate the first move, cannot place at the center if a board has a odd number dimension
+            if self._turn == 1 and self.n % 2 == 1:
+                while (r, q) == (self.n // 2, self.n // 2):
+                    coord = input(f'| Cannot place the first move at the middle of the board {(self.n//2, self.n//2)}!\n| Please try again: ')
+                    r, q = tuple(int(i) for i in coord.split())
         
-        # TODO: validate the user input 
+        # validate the user input 
         while self.board.is_occupied(coord=(r, q)):
-            print(self.board[(r, q)])
             coord = input('| Current cell is occupied, please try again: ')
             r, q = tuple(int(i) for i in coord.split())
             
@@ -78,7 +85,7 @@ class Player:
         # _turn number is even it has a token 'blue'
         token = 'red' if (self._turn - 1) % 2 == 0 else 'blue'
         
-        # TODO: update board data
+        # update board data
         # if a steal action is performed, update the board
         if action[0] == STEAL:
             self.board.swap()
