@@ -9,6 +9,12 @@ A game agent random select a position to play without any heuristic or evaluatio
 
 """
 
+from utility.board import Board
+import random
+
+STEAL="STEAL"
+PLACE="PLACE"
+
 class Player:
     def __init__(self, player, n):
         """
@@ -20,6 +26,11 @@ class Player:
         as Blue.
         """
         # put your code here
+        self.colour = player
+        self.n = n
+        self.board = Board(n)
+        self._turn = 1
+        self.name = f'Human Player {player}'
 
     def action(self):
         """
@@ -27,6 +38,20 @@ class Player:
         of the game, select an action to play.
         """
         # put your code here
+        
+        # TODO: check steal action if self._turn == 2
+        if self._turn == 2 and random.choice([STEAL, PLACE]) == STEAL:
+            return (STEAL,)    
+        
+        # TODO: check board valid points and random select a point to place the hexagon tile
+        valid_moves = list()
+        for r in range(self.n):
+            for q in range(self.n):
+                if not self.board.is_occupied(coord=(r, q)):
+                    valid_moves.append((r, q))
+
+        r, q = random.choice(valid_moves)
+        return (PLACE, r, q)
     
     def turn(self, player, action):
         """
@@ -40,4 +65,20 @@ class Player:
         above. However, the referee has validated it at this point.
         """
         # put your code here
-
+        
+        # _turn number is odd means current player has a token color 'red'
+        # _turn number is even it has a token 'blue'
+        token = 'red' if (self._turn - 1) % 2 == 0 else 'blue'
+        
+        # TODO: update board data
+        # if a steal action is performed, update the board
+        if action[0] == STEAL:
+            self.board.swap()
+        else:
+            move, r, q = action
+            self.board.place(token=token, coord=(r, q))
+        
+        self._turn += 1
+        
+    def __repr__(self):
+        print(f"{self.name}")

@@ -92,7 +92,7 @@ class _CountdownTimer:
 
     * measures CPU time, not wall-clock time
     * unless time_limit is 0, throws an exception upon exiting the context
-      after the allocated time has passed
+    after the allocated time has passed
     """
 
     def __init__(self, time_limit, name):
