@@ -1,14 +1,11 @@
 """
 
-Cachex Game Agent (MINIMAX+ALPHA_BETA)
+Cachex Game Agent (RANDOM_PLAY_AGENT)
 Team: _4399 
 Member 1: {email: sunchuangyuh@student.unimelb.edu.au, student id: 1118472}
 Member 2: {email: weizhao1@student.unimelb.edu.au, student id: 1118649}
 
-The game agent using minimax + alpha-beta pruning algorithm to perform the intelligent game agent
-
-For implementation details & ideas behind the agent please check overleaf report:
-https://www.overleaf.com/read/bvyssryrvdpz [VIEW ONLY]
+A game agent random select a position to play without any heuristic or evaluation function, just randomly select a playable point to place the hexagon tile. This agent is use to compete and train _4399 MINIMAX+ALPHA_BETA agent parameters.
 
 """
 
