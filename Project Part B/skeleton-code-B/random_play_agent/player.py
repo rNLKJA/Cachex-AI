@@ -37,18 +37,23 @@ class Player:
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
-        # put your code here
         
-        # TODO: check steal action if self._turn == 2
+        # check steal action if self._turn == 2
         if self._turn == 2 and random.choice([STEAL, PLACE]) == STEAL:
             return (STEAL,)    
         
-        # TODO: check board valid points and random select a point to place the hexagon tile
+        # check board valid points and random select a point to place the hexagon tile
         valid_moves = list()
         for r in range(self.n):
             for q in range(self.n):
                 if not self.board.is_occupied(coord=(r, q)):
                     valid_moves.append((r, q))
+                else:
+                    for move in self.board._coord_neighbours((r, q)):
+                        if not self.board.is_occupied(coord=(r, q)):
+                            valid_moves.append((r, q))
+
+        random.shuffle(valid_moves)
 
         r, q = random.choice(valid_moves)
         return (PLACE, r, q)
@@ -70,7 +75,7 @@ class Player:
         # _turn number is even it has a token 'blue'
         token = 'red' if (self._turn - 1) % 2 == 0 else 'blue'
         
-        # TODO: update board data
+        # update board data
         # if a steal action is performed, update the board
         if action[0] == STEAL:
             self.board.swap()
