@@ -40,7 +40,7 @@ class Player:
         # put your code here
         # check steal action if self._turn == 2
         if self._turn == 2:
-            if input("| Do you want to steal the tile? [Y/n]").lower() in ['yes', 'y']:
+            if input("| Do you want to steal the tile? [Y/n]: ").lower() in ['yes', 'y']:
                 return (STEAL,)
         
         print("| Please enter a coordinate tuple which separate by space, no bracket needed\n| E.g. 0 0, this represents that you will put a hexagon tile on coord (0, 0)")
