@@ -1,8 +1,9 @@
 from typing import Tuple, Dict, Union, List
 from itertools import permutations
+import math
 
 from referee.board import Board
-from utility.utils import PLACE, STEAL
+from utility.utils import PLACE, STEAL, log
 
 _PLAYER_AXIS = {
     "red": 0, # Red aims to form path in r/0 axis
@@ -21,8 +22,11 @@ class Board_4399(Board):
     def __init__(self, n: int):
         super().__init__(n)
         self.last_action = None
+        self.last_player = "blue"
+        self.winner = None
+        self._turn = 1
     
-    def is_odd(self, n: int) -> bool:
+    def is_odd(self, n: int=None) -> bool:
         """
         Check a board is constructed by odd or even dimension number
 
@@ -32,20 +36,10 @@ class Board_4399(Board):
         Returns:
             bool: True if board dimension size is a odd number, else False 
         """
+        if n is None:
+            return self.n % 2 == 1
         return n % 2 == 1
-    
-    def is_end(self):
-        action = self.last_action
-        
-        if action is STEAL() or action is None:
-            return {"winner": None}
-        else:
-            _, r, q = action
-            reachable = self.board.connected_coords((r, q))
-            axis_vals = [coord[_PLAYER_AXIS[player]] for coord in reachable]
-            if min(axis_vals) == 0 and max(axis_vals) == self.board.n - 1:
-                return {"winner": player}
-    
+            
     def available_hexagons(self) -> List[Tuple[int, int]]:
         """
         Return available hexagons to place the tiles
@@ -58,6 +52,29 @@ class Board_4399(Board):
         
         # add diagonal elements to moves list since permutation doesn't include diagonal elements
         for i in range(self.n):
-            moves.add((i, i))
+            if not self.is_occupied(coord = (i, i)):
+                moves.add((i, i))
                 
         return moves
+    
+    def update(self, player:str, action: Tuple[str, int, int]) -> None:
+        """
+        TODO: add docstring
+
+        Args:
+            player (str): _description_
+            action (Tuple[str, int, int]): _description_
+        """
+        
+        if action == STEAL():
+            self.swap()
+        else:
+            _, r, q = action
+
+            self.place(token=player, coord=(r, q))
+        
+        self._turn += 1
+        self.last_action = action
+        self.last_player = player
+        
+        print(self._data)

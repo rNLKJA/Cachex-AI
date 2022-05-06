@@ -14,7 +14,7 @@ def minimax(position, depth, alpha, beta, maximizingPlayer=True):
         return eval(board)
     
     if maximizingPlayer:
-        maxEval = math.inf
+        maxEval = -math.inf
         for move in v_moves(board):
             eval = minimax(child, depth-1, alpha, beta, !maximizingPlayer)
             maxEval = max(maxEval, eval)
@@ -23,7 +23,7 @@ def minimax(position, depth, alpha, beta, maximizingPlayer=True):
                 break
         return maxEval * apply_bias()
     else:
-        minEval = -math.inf
+        minEval = math.inf
         for move in v_moves(board):
             eval = minimax(child, depth-1, alpha, beta, maximizingPlayer)
             beta = min(beta, eval)

@@ -12,11 +12,15 @@ https://www.overleaf.com/read/bvyssryrvdpz [VIEW ONLY]
 
 """
 from typing import Tuple
+import math
+
+from referee.game import Game
 
 from utility.board import Board_4399 as Board # import custom board
 from utility.utils import PLACE, STEAL, log
 
-from _4399 import minimax
+from _4399.minimax import minimax
+
 
 # Define static variables
 _PLAYER_AXIS = {
@@ -24,6 +28,9 @@ _PLAYER_AXIS = {
     "blue": 1 # Blue aims to form path in q/1 axis
 }
 RED, BLUE = 'red', 'blue'
+
+MAX_PLAYER, MIN_PLAYER = True, False
+
 
 class Player:
     def __init__(self, player: str, n: int):
@@ -41,23 +48,24 @@ class Player:
         """
         self.colour: str = player
         self.n: int = n
-        self.board: Board = Board(n)
-        self._turn: int = 1
+        self.board = Board(n)
         self.name = "4399 Strategy Cachex Game Agent"
+        
 
     def action(self):
         """
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
-        log(self.board.available_hexagons())
-        log(f"length of available moves: {len(self.board.available_hexagons())}")
         
-        while self._turn <= 2:
-            log(f"Current winner is {self.board.is_end()}")
-            return enforced_gamestart_play(n = self.n, player = self.colour, board = self.board)
-        
-        
+        # if a player plays red, then AI will maximizing the minimax value
+        # otherwise, AI will minimizing the minimax value
+
+        _, action = minimax(board=self.board,
+                            depth=10,
+                            alpha=-math.inf,
+                            beta=math.inf, maximizingPlayer=isMaximizingPlayer(self.colour))
+        return action
     
     def turn(self, player, action):
         """
@@ -70,17 +78,29 @@ class Player:
         the same as what your player returned from the action method
         above. However, the referee has validated it at this point.
         """
-        self.last_action = action
-        
-        if action is STEAL():
+        if action == STEAL():
             self.board.swap()
         else:
             _, r, q = action
-            self.board.place(token = self.colour, coord = (r, q))
+            self.board.place(token=self.colour, coord=(r, q))
         
-        # track turn number
-        self._turn += 1
+        # track turn number and placement action
+        self.board.last_action = action
+        self.board.last_player = player
+        self.board._turn += 1
+        
 
+def isMaximizingPlayer(player: str) -> bool:
+    """
+    TODO: complete docstring
+
+    Args:
+        player (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    return MAX_PLAYER if player == 'red' else MIN_PLAYER
 
 def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int, int]:
     """
@@ -115,4 +135,3 @@ def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int
             return STEAL()
         elif player is RED:
             return PLACE(coord = (1, 1))
-

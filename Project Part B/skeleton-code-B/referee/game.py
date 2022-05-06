@@ -101,6 +101,7 @@ def play(
         # should still implement a method called `__init__()`, not one
         # called `init()`:
         player.init(colour, n)
+        
 
     # Display the initial state of the game.
     comment("game start!", depth=-1)

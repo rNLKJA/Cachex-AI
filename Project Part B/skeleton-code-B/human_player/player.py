@@ -9,7 +9,8 @@ HUMAN PLAYER AGENT, each action require a coordinates input to update the board 
 
 """
 
-from utility.board import Board
+from utility.board import Board_4399 as Board
+from utility.utils import log
 
 STEAL="STEAL"
 PLACE="PLACE"
@@ -28,7 +29,6 @@ class Player:
         self.colour = player
         self.n = n
         self.board = Board(n)
-        self._turn = 1
         self.name = f'Human Player {player}'
 
     def action(self):
@@ -39,7 +39,7 @@ class Player:
         
         # put your code here
         # check steal action if self._turn == 2
-        if self._turn == 2:
+        if self.board._turn == 2:
             if input("| Do you want to steal the tile? [Y/n]: ").lower() in ['yes', 'y']:
                 return (STEAL,)
         
@@ -56,7 +56,7 @@ class Player:
                 print("| The input must strictly follow the format r q, e.g. 0 0")
                 coord = input("| Please try again: ")
             # validate the first move, cannot place at the center if a board has a odd number dimension
-            if self._turn == 1 and self.n % 2 == 1:
+            if self.board._turn == 1 and self.n % 2 == 1:
                 while (r, q) == (self.n // 2, self.n // 2):
                     coord = input(f'| Cannot place the first move at the middle of the board {(self.n//2, self.n//2)}!\n| Please try again: ')
                     r, q = tuple(int(i) for i in coord.split())
@@ -81,19 +81,9 @@ class Player:
         """
         # put your code here
         
-        # _turn number is odd means current player has a token color 'red'
-        # _turn number is even it has a token 'blue'
-        token = 'red' if (self._turn - 1) % 2 == 0 else 'blue'
+        self.board.update(player=player, action=action)
         
-        # update board data
-        # if a steal action is performed, update the board
-        if action[0] == STEAL:
-            self.board.swap()
-        else:
-            move, r, q = action
-            self.board.place(token=token, coord=(r, q))
-        
-        self._turn += 1
+        log(f"{self.board.last_action}, {self.board.last_player}")
         
     def __repr__(self):
         print(f"{self.name}")

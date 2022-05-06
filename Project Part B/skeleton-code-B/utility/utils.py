@@ -43,3 +43,4 @@ def log(content) -> None:
         content (optional): logging content
     """
     logging.info(content)
+    
