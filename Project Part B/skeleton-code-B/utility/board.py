@@ -76,5 +76,3 @@ class Board_4399(Board):
         self._turn += 1
         self.last_action = action
         self.last_player = player
-        
-        print(self._data)

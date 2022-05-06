@@ -48,7 +48,7 @@ class Player:
         """
         self.colour: str = player
         self.n: int = n
-        self.board = Board(n)
+        self.board = Board(n) 
         self.name = "4399 Strategy Cachex Game Agent"
         
 
@@ -62,7 +62,7 @@ class Player:
         # otherwise, AI will minimizing the minimax value
 
         _, action = minimax(board=self.board,
-                            depth=10,
+                            depth=5,
                             alpha=-math.inf,
                             beta=math.inf, maximizingPlayer=isMaximizingPlayer(self.colour))
         return action
@@ -78,16 +78,7 @@ class Player:
         the same as what your player returned from the action method
         above. However, the referee has validated it at this point.
         """
-        if action == STEAL():
-            self.board.swap()
-        else:
-            _, r, q = action
-            self.board.place(token=self.colour, coord=(r, q))
-        
-        # track turn number and placement action
-        self.board.last_action = action
-        self.board.last_player = player
-        self.board._turn += 1
+        self.board.update(player=player, action=action)
         
 
 def isMaximizingPlayer(player: str) -> bool:

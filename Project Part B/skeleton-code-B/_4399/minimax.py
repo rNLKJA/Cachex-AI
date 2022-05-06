@@ -40,16 +40,19 @@ def minimax(board: Board,
     # if depth = 0 or node is a terminal node then
     # return the evaluation value of node
     if depth == 0 or game_end(board=board):
+        # log(f"depth::: {depth}")
+        # log(game_end(board=board))
+        # log(board.winner)
         # if there is no winner, return 0
         if board.winner is None:
-            return Eval(board=board)
-        elif maximizingPlayer and board.winner is RED:
+            return Eval(board=board), None
+        elif maximizingPlayer and board.winner == RED:
             return math.inf, None
-        elif maximizingPlayer and board.winner is BLUE:
+        elif maximizingPlayer and board.winner == BLUE:
             return -math.inf, None
-        elif not maximizingPlayer and board.winner is BLUE:
+        elif not maximizingPlayer and board.winner == BLUE:
             return -math.inf, None
-        elif not maximizingPlayer and board.winner is RED:
+        elif not maximizingPlayer and board.winner == RED:
             return math.inf, None
     
     
@@ -110,7 +113,7 @@ def switch_minimax_player(player):
     return "red" if player == "blue" else "red"
 
 def game_end(board: Board):
-    log(len(board.available_hexagons()))
+
     if len(board.available_hexagons()) == 0:
         return False
     
@@ -124,11 +127,7 @@ def game_end(board: Board):
         
         
         axis_vals = [coord[_PLAYER_AXIS[board.last_player]] for coord in reachable]
-        log("----------")
-        log(board.last_player)
-        log(reachable)
-        log(axis_vals)
-        log("-----------")
+
         if min(axis_vals) == 0 and max(axis_vals) == board.n - 1:
             board.winner = board.last_player
             
