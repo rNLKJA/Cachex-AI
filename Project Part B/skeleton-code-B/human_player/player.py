@@ -10,7 +10,7 @@ HUMAN PLAYER AGENT, each action require a coordinates input to update the board 
 """
 
 from utility.board import Board
-from _4399.eval_func import token_counter
+from _4399.eval_func import token_counter,counte_token_in_triangle
 
 STEAL="STEAL"
 PLACE="PLACE"
@@ -45,8 +45,10 @@ class Player:
                 return (STEAL,)
 
         counter = token_counter(self.board,self.n)
-
-        print(counter)
+        triangle = counte_token_in_triangle(self.board,self.n)
+        
+        print('token count ',counter)
+        print('token in triangle count ', triangle)
         print("| Please enter a coordinate tuple which separate by space, no bracket needed\n| E.g. 0 0, this represents that you will put a hexagon tile on coord (0, 0)")
         coord = input('| Please enter your coordinate: ')
         
