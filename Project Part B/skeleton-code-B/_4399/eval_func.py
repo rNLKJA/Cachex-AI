@@ -13,8 +13,7 @@ _HEX_STEPS = array([(1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0), (0, -1)],
 _TRIANGLE_PATTERNS = [[n1, n2] 
 
     for n1, n2 in 
-        list(zip(_HEX_STEPS, roll(_HEX_STEPS, 1))) + 
-        list(zip(_HEX_STEPS, roll(_HEX_STEPS, 2)))]
+        list(zip(_HEX_STEPS, roll(_HEX_STEPS, 1)))]
 
 _DIAMOND_PATTERNS = [[_ADD(n1, n2), n1, n2] 
 
@@ -68,8 +67,8 @@ def token_in_triangle(board : Board, coord):
 
     for pattern in _TRIANGLE_PATTERNS:
         coords = [_ADD(coord, s) for s in pattern]
-        if stable_triangle(coords,coord):
-            if all(map(board.inside_bounds, coords)):
+        
+        if all(map(board.inside_bounds, coords)):
                 tokens = [board._data[coord] for coord in coords]
                 if tokens == [opp_type, opp_type]:
 
