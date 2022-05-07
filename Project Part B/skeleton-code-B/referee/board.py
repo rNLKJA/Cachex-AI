@@ -34,6 +34,7 @@ _HEX_STEPS = array([(1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0), (0, -1)],
 # which case the neighbours are spaced apart (roll 2). This means
 # for a given cell, it is part of 6 + 6 possible diamonds.
 _CAPTURE_PATTERNS = [[_ADD(n1, n2), n1, n2] 
+
     for n1, n2 in 
         list(zip(_HEX_STEPS, roll(_HEX_STEPS, 1))) + 
         list(zip(_HEX_STEPS, roll(_HEX_STEPS, 2)))]
