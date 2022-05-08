@@ -9,7 +9,7 @@ HUMAN PLAYER AGENT, each action require a coordinates input to update the board 
 
 """
 
-from utility.board import Board_4399 as Board
+from utility.board import Board_4399
 from utility.utils import log
 from utility.board import Board
 from _4399.eval_func import token_counter,counte_token_in_triangle
@@ -30,7 +30,7 @@ class Player:
         # put your code here
         self.colour = player
         self.n = n
-        self.board = Board(n)
+        self.board = Board_4399(n)
         self.name = f'Human Player {player}'
 
     def action(self):
@@ -91,8 +91,7 @@ class Player:
         # put your code here
         
         self.board.update(player=player, action=action)
-        
-        log(f"{self.board.last_action}, {self.board.last_player}")
+
         
     def __repr__(self):
         print(f"{self.name}")

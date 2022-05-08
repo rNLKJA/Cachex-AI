@@ -51,7 +51,7 @@ def Eval(board: Board) -> float:
     score = 0
     
     # calculate the number of empty hexagons
-    score += weights[1] * n_emptyhex(board)
+    # score += weights[1] * n_emptyhex(board)
 
     # calculate the hexagon number difference between differnet player
     score += weights[2] * n_diffhex(board)

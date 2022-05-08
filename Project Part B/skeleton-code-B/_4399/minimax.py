@@ -33,6 +33,7 @@ _PLAYER_AXIS = {
 }
 
 def minimax(board: Board, 
+            player: str,
             depth: int,
             alpha: float,
             beta: float, 
@@ -47,17 +48,18 @@ def minimax(board: Board,
         if board.winner is None:
             return Eval(board=board), None
         elif maximizingPlayer and board.winner == RED:
-            return math.inf, None
+            return 10, None
         elif maximizingPlayer and board.winner == BLUE:
-            return -math.inf, None
+            return -10, None
         elif not maximizingPlayer and board.winner == BLUE:
-            return -math.inf, None
+            return -10, None
         elif not maximizingPlayer and board.winner == RED:
-            return math.inf, None
+            return 10, None
     
     
     # find all valid actions
     v_actions = get_valid_actions(board)
+    next_player = 'red' if player == BLUE else 'blue'
     
     # AI try to maximizing its performance    
     if maximizingPlayer:
@@ -68,9 +70,10 @@ def minimax(board: Board,
         # copy the current board and recalculate the minimax score
         for action in v_actions:
             temp_board = deepcopy(board)
-            temp_board.update(player=BLUE, action=action)
+            temp_board.update(player=next_player, action=action)
 
             eval_score, _ = minimax(board=temp_board, 
+                                        player=next_player,
                                         depth=depth-1,
                                         alpha=alpha,
                                         beta=beta,
@@ -93,8 +96,9 @@ def minimax(board: Board,
         for action in v_actions:
             
             temp_board = deepcopy(board)
-            temp_board.update(player=RED, action=action)
+            temp_board.update(player=next_player, action=action)
             eval_score, _ = minimax(board=temp_board,
+                                    player=next_player,
                                         depth=depth-1,
                                         alpha=alpha,
                                         beta=beta,
@@ -124,13 +128,12 @@ def game_end(board: Board):
         _, r, q = board.last_action
         reachable = board.connected_coords((r, q))
         
-        
+        # log(f"{board.last_player} {reachable}")
         
         axis_vals = [coord[_PLAYER_AXIS[board.last_player]] for coord in reachable]
 
         if min(axis_vals) == 0 and max(axis_vals) == board.n - 1:
             board.winner = board.last_player
-            
             return True
     return False
 

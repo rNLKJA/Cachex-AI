@@ -62,6 +62,7 @@ class Player:
         # otherwise, AI will minimizing the minimax value
 
         _, action = minimax(board=self.board,
+                            player=self.colour,
                             depth=5,
                             alpha=-math.inf,
                             beta=math.inf, maximizingPlayer=isMaximizingPlayer(self.colour))
@@ -91,7 +92,7 @@ def isMaximizingPlayer(player: str) -> bool:
     Returns:
         _type_: _description_
     """
-    return MAX_PLAYER if player == 'red' else MIN_PLAYER
+    return MIN_PLAYER if player == 'red' else MAX_PLAYER
 
 def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int, int]:
     """

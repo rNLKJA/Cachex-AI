@@ -1,4 +1,4 @@
 {
-  "weights": [1, 1, 1],
+  "weights": [1, 0.1, 0.8],
   "f_name": ["Winner", "Number of empty cells", "number of hex difference"]
 }
