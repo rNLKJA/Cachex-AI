@@ -48,11 +48,13 @@ class Player:
         triangle = count_token_in_triangle(self.board,self.n)
         diamond = count_token_in_diamond(self.board,self.n)
         weakness = count_token_in_weakness(self.board,self.n)
+        steps = estimate_steps_to_win(self.board,self.n)
         
         print('token count ',counter)
         print('token in triangle count ', triangle)
         print('tokens are likely to be captured: ', diamond)
         print('token in a weak position: ', weakness)
+        print('steps: ', steps)
         print("| Please enter a coordinate tuple which separate by space, no bracket needed\n| E.g. 0 0, this represents that you will put a hexagon tile on coord (0, 0)")
         coord = input('| Please enter your coordinate: ')
         

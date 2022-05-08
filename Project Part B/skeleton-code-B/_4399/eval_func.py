@@ -10,6 +10,11 @@ _ADD = lambda a, b: (a[0] + b[0], a[1] + b[1])
 _HEX_STEPS = array([(1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0), (0, -1)], 
     dtype="i,i")
 
+_PLAYER_AXIS = {
+    "red": 0, # Red aims to form path in r/0 axis
+    "blue": 1 # Blue aims to form path in q/1 axis
+}   
+
 # The pattern that needs to be used to measure the board score
 
 _TRIANGLE_PATTERNS = [[n1, n2] 
@@ -160,3 +165,19 @@ def token_in_weakness(board : Board, coord):
                 return True
     
     return False
+
+def estimate_steps_to_win(board, board_size):
+    result = {}
+    for r in range(board_size):
+            for q in range(board_size):
+                if board._data[(r,q)] != 0:
+                    player = board.__getitem__(coord=(r, q))
+                    reachable = board.connected_coords((r, q))
+                    axis_vals = [coord[_PLAYER_AXIS[player]] for coord in reachable]
+                    steps_to_win = board_size - ( max(axis_vals) - min(axis_vals) + 1)
+                    
+                    if player not in result:
+                        result[player] = steps_to_win
+                    if player in result and steps_to_win < result[player]:
+                        result[player] = steps_to_win
+    return result
