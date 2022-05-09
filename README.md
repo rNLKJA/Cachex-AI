@@ -75,30 +75,15 @@ conda activate COMP30024
 python3 main.py
 ```
 
-## Project Progress Tracking
-<!-- ### Part A Progress Tracking
-
-- [x] Find a group partner [@EcZww](https://github.com/EcZww)
-- [x] Understand A\* heuristic algorithm
-- [x] Path finding strategy design
-- [x] Code tasks
-- [x] Report writing
-- [x] Complete states check
-- [x] Final Code & Report Submission -->
-
-### Part B Progress Tracking
-
 ## Project Report
-### Part A Breif Report
 
-https://www.overleaf.com/read/rjtbjbrbgkqb
-
-### Project Part B Brief Report
-
-https://www.overleaf.com/read/bvyssryrvdpz
+| Project Part | Overleaf link |
+| :---- | :---- |
+| Part A | https://www.overleaf.com/read/rjtbjbrbgkqb |
+| Part B | https://www.overleaf.com/read/bvyssryrvdpz |
 
 ## Others
 
-<p>More notes about the project is available on <a href='https://www.notion.so/huangsunchuangyu/Project-Part-A-97ad43542a9a42d39433a14d834102f8'><img height=20 src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white" alt='notion'></a></p>
+<p>More notes about the project is available on <a href='https://www.notion.so/huangsunchuangyu/Project-Part-A-97ad43542a9a42d39433a14d834102f8'><img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white" alt='notion'></a></p>
 
 Project license is available at [HERE](https://github.com/chuangyu-hscy/legendary-succotash/blob/master/COMP30024%20Project/LICENSE). Please notice this repository won't be pulic until Unimelb 2022 Semester 1 COMP30024 course ends. For academic intergrity and your honesty, please notice that all code fragments should not directly copy paste to your code. In other cases all codes under folder `COMP30024 Project` are followed by MIT LICENSE.
