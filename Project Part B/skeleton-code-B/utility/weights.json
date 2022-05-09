@@ -1,10 +1,11 @@
 {
-  "weights": [0.1, 0.3, 0.2, 0.2, 0.1, 0.1],
+  "weights": [0.5, 3, 1, -2, -2, 1],
   "f_name": [
     "number of empty hexagons",
     "number of token in triangular",
     "number of token of each color",
     "number of token in a capturable diamond shape",
+    "number of token in weakness",
     "estimate steps to win"
   ]
 }

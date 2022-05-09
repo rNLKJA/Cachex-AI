@@ -53,6 +53,8 @@ class Player:
                         if not self.board.is_occupied(coord=(r, q)):
                             valid_moves.append((r, q))
 
+        if self.n % 2 == 1 and self._turn == 1:
+            valid_moves.remove((self.n // 2, self.n // 2))
         random.shuffle(valid_moves)
 
         r, q = random.choice(valid_moves)

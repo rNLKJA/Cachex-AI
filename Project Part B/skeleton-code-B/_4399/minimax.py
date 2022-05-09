@@ -62,11 +62,6 @@ def minimax(board: Board,
 
     
     # TODO: break the minimax if the next game action does terminate the game
-    
-    # v_boards = [deepcopy(board).update(player=next_player,
-    #                                     action=action) for action in v_actions]
-    
-    
     # AI try to maximizing its performance    
     if maximizingPlayer:
         # initialise the maximum score to -inf

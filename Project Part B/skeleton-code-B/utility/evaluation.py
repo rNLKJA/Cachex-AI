@@ -12,6 +12,7 @@ import json
 import numpy as np
 
 from typing import List, Callable, Tuple
+import random
 
 from utility.board import Board
 from utility.utils import log
@@ -71,7 +72,7 @@ def Eval(board: Board, player) -> float:
             if opponent in result:
                 score -= result[opponent] * weight
 
-    return score
+    return score * apply_bias()
 
 # ---------------------------------------------------
 # Custom Evaluation Functions

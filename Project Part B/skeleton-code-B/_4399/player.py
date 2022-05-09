@@ -13,13 +13,14 @@ https://www.overleaf.com/read/bvyssryrvdpz [VIEW ONLY]
 """
 from typing import Tuple
 import math
+from copy import deepcopy
 
 from referee.game import Game
 
 from utility.board import Board_4399 as Board # import custom board
 from utility.utils import PLACE, STEAL, log
 
-from _4399.minimax import minimax
+from _4399.minimax import minimax, get_valid_actions, game_end
 
 
 # Define static variables
@@ -57,13 +58,24 @@ class Player:
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
+        # enforce game play on the first two move
+        if self.board._turn <= 2:
+            return enforced_gamestart_play(n=self.board.n, player=self.colour, board=self.board)
         
-        # if a player plays red, then AI will maximizing the minimax value
-        # otherwise, AI will minimizing the minimax value
+        # minimax will always try to maximizing the game value
+        # if only one step left to win the game, then place that action without minimax calculation
+        v_actions = get_valid_actions(self.board)
+        for action in v_actions: 
+            temp_board = deepcopy(self.board)
+            temp_board.update(player=self.colour, action=action)
+            if game_end(board=temp_board):
+                return action 
+        
 
+        # if more steps are needed, then execute the minimax iteration
         _, action = minimax(board=self.board,
                             player=self.colour,
-                            depth=5,
+                            depth=3,
                             alpha=-math.inf,
                             beta=math.inf, maximizingPlayer=True)
         return action
@@ -122,9 +134,11 @@ def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int
             return STEAL()
         elif player is RED:
             return PLACE(coord = (1, 0))
+        else:
+            return PLACE(coord = (0, 1))
     else:
         if player is BLUE and board.is_occupied((1, 1)):
             return STEAL()
         # TODO: choose a point from the main axis
-        elif player is RED:
+        else:
             return PLACE(coord = (1, 1))
