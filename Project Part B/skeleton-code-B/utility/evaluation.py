@@ -15,7 +15,7 @@ from typing import List, Callable, Tuple
 
 from utility.board import Board
 from utility.utils import log
-
+from _4399.eval_func import *
 # define constant variables
 MAGIC_NUMBER: float = 1e-5
 RED, BLUE = 'red', 'blue'
@@ -35,8 +35,8 @@ def apply_bias(bias: float=MAGIC_NUMBER) -> float:
 # read weights for evaluation functions
 with open("./utility/weights.json", "r") as json_file:
     weights = np.array(json.load(json_file)['weights'])
-
-def Eval(board: Board) -> float:
+    
+def Eval(board: Board, player) -> float:
     """
     Evaluation functions
     TODO: add docstring
@@ -48,13 +48,29 @@ def Eval(board: Board) -> float:
     Returns:
         float: _description_
     """
+    efuncs = [n_emptyhex, 
+                count_token_in_triangle, 
+                token_counter, 
+                count_token_in_diamond, 
+                count_token_in_weakness,
+                estimate_steps_to_win]
     score = 0
     
+    opponent = RED if player == 'blue' else BLUE
+    
     # calculate the number of empty hexagons
-    # score += weights[1] * n_emptyhex(board)
+    for func, weight in zip(efuncs, weights):
+        result = func(board)
+        if type(result) != dict:
+            score += result * weight
+        else:
+            if result == dict():
+                score += 0
+            if player in result:
+                score += result[player] * weight 
+            if opponent in result:
+                score -= result[opponent] * weight
 
-    # calculate the hexagon number difference between differnet player
-    score += weights[2] * n_diffhex(board)
     return score
 
 # ---------------------------------------------------

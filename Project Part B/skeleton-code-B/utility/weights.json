@@ -1,4 +1,10 @@
 {
-  "weights": [1, 0.1, 0.8],
-  "f_name": ["Winner", "Number of empty cells", "number of hex difference"]
+  "weights": [0.1, 0.3, 0.2, 0.2, 0.1, 0.1],
+  "f_name": [
+    "number of empty hexagons",
+    "number of token in triangular",
+    "number of token of each color",
+    "number of token in a capturable diamond shape",
+    "estimate steps to win"
+  ]
 }

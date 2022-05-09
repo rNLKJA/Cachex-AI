@@ -37,7 +37,8 @@ _SWAP_PLAYER = { 0: 0, 1: 2, 2: 1 }
 
 
 # count the current number of tokens for red/blue in the board 
-def token_counter(board : Board, board_size): 
+def token_counter(board : Board, board_size=None): 
+    board_size = board.n
 
     result = {}
     for r in range(board_size):
@@ -51,7 +52,9 @@ def token_counter(board : Board, board_size):
     return result
 
 # count how many tokens are in a stable_triangle pattern
-def count_token_in_triangle(board : Board, board_size): 
+def count_token_in_triangle(board : Board):
+    
+    board_size = board.n
     result = {}
     for r in range(board_size):
             for q in range(board_size):
@@ -65,8 +68,9 @@ def count_token_in_triangle(board : Board, board_size):
     return result
 
 # count how many tokens are a diamond pattern that will be captured
-def count_token_in_diamond(board : Board, board_size): 
+def count_token_in_diamond(board : Board, board_size=None): 
     result = {}
+    board_size = board.n
     for r in range(board_size):
             for q in range(board_size):
                 if board.is_occupied(coord=(r, q)):
@@ -115,7 +119,6 @@ def calculate_Euclid_distance_square(coord1, coord2):
     B_x, B_y = coord2
 
     return ((A_x-B_x)^2 + (A_y-B_y)^2)
-         
 
 def token_in_diamond(board : Board, coord):
     opp_type = board._data[coord]
@@ -134,7 +137,8 @@ def token_in_diamond(board : Board, coord):
     return False
 
 # count how many tokens are a weak pattern that will be attacked
-def count_token_in_weakness(board : Board, board_size):
+def count_token_in_weakness(board : Board, board_size=None):
+    board_size = board.n
     result = {}
     for r in range(board_size):
             for q in range(board_size):
@@ -145,7 +149,7 @@ def count_token_in_weakness(board : Board, board_size):
                             result[token] = 1
                         else: result[token] += 1   
 
-    return result    
+    return result  
 
 def token_in_weakness(board : Board, coord):
     opp_type = board._data[coord]
@@ -166,7 +170,8 @@ def token_in_weakness(board : Board, coord):
     
     return False
 
-def estimate_steps_to_win(board, board_size):
+def estimate_steps_to_win(board, board_size=None):
+    board_size = board.n
     result = {}
     for r in range(board_size):
             for q in range(board_size):

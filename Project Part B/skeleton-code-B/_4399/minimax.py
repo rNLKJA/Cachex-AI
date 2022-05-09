@@ -46,20 +46,26 @@ def minimax(board: Board,
         # log(board.winner)
         # if there is no winner, return 0
         if board.winner is None:
-            return Eval(board=board), None
+            return Eval(board=board, player=player), None
         elif maximizingPlayer and board.winner == RED:
-            return 10, None
+            return math.inf, None
         elif maximizingPlayer and board.winner == BLUE:
-            return -10, None
+            return -math.inf, None
         elif not maximizingPlayer and board.winner == BLUE:
-            return -10, None
+            return -math.inf, None
         elif not maximizingPlayer and board.winner == RED:
-            return 10, None
+            return math.inf, None
     
     
     # find all valid actions
     v_actions = get_valid_actions(board)
-    next_player = 'red' if player == BLUE else 'blue'
+
+    
+    # TODO: break the minimax if the next game action does terminate the game
+    
+    # v_boards = [deepcopy(board).update(player=next_player,
+    #                                     action=action) for action in v_actions]
+    
     
     # AI try to maximizing its performance    
     if maximizingPlayer:
@@ -70,10 +76,10 @@ def minimax(board: Board,
         # copy the current board and recalculate the minimax score
         for action in v_actions:
             temp_board = deepcopy(board)
-            temp_board.update(player=next_player, action=action)
+            temp_board.update(player=player, action=action)
 
             eval_score, _ = minimax(board=temp_board, 
-                                        player=next_player,
+                                        player=player,
                                         depth=depth-1,
                                         alpha=alpha,
                                         beta=beta,
@@ -90,6 +96,7 @@ def minimax(board: Board,
     else:
         # initialize the minimum score to inf
         min_score, min_action = math.inf, None
+        next_player = RED if player == 'blue' else BLUE
         
         # for each action
         # copy the current board and recalculate the minimax score

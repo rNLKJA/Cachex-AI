@@ -65,7 +65,7 @@ class Player:
                             player=self.colour,
                             depth=5,
                             alpha=-math.inf,
-                            beta=math.inf, maximizingPlayer=isMaximizingPlayer(self.colour))
+                            beta=math.inf, maximizingPlayer=True)
         return action
     
     def turn(self, player, action):
@@ -125,5 +125,6 @@ def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int
     else:
         if player is BLUE and board.is_occupied((1, 1)):
             return STEAL()
+        # TODO: choose a point from the main axis
         elif player is RED:
             return PLACE(coord = (1, 1))
