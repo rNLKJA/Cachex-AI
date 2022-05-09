@@ -1,4 +1,5 @@
 # 2022 S1 COMP30024 Artificial Intelligence Project
+> Cachex is a two-player connection game of strategy anticipation and sabotage. Establish efficient territorial control by constructioin of geometric patterns whiule sabotaging the best laid plans of your opponent'ss territorial instructions and unite patterns to victory!
 
 > Cachex is a perfect-information two-player game played on an n × n rhombic, hexagonally tiled board, based on the strategy game Hex.
 
