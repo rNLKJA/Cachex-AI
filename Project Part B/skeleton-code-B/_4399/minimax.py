@@ -114,10 +114,28 @@ def minimax(board: Board,
                 break
         return min_score, min_action
 
-def switch_minimax_player(player):
-    return "red" if player == "blue" else "red"
+def switch_minimax_player(player: str) -> bool:
+    """
+    DEPRECATED
+
+    Args:
+        player (str): player colour string
+
+    Returns:
+        bool: return a player is RED or BlUE
+    """
+    return RED if player == BLUE else RED
 
 def game_end(board: Board):
+    """
+    Game termination state check
+
+    Args:
+        board (Board): cachex game board
+
+    Returns:
+        bool: if True then terminate the minimax iteration, else False
+    """
 
     if len(board.available_hexagons()) == 0:
         return False

@@ -9,9 +9,9 @@ Custom utility functions which represent the team game play strategies.
 
 """
 import json
-import numpy as np
-
 from typing import List, Callable, Tuple
+
+import numpy as np
 import random
 
 from utility.board import Board
