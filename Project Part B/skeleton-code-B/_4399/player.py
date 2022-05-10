@@ -165,10 +165,11 @@ def dynamic_depth_allocation(board: Board) -> int:
     Returns:
         int: depth
     """
+    # TODO: need a better way to perform
     curr_hex_utilize_rate = 1 - len(board.available_hexagons()) / (board.n ** 2)
     
     hex_rate_range = np.linspace(3, board.n, board.n//2)**2 / board.n**2
-    hex_rate_range[0] += 0.5
+    hex_rate_range += 0.3
     # index represent the depth
     hex_rate_index = np.arange(0, board.n//2)
     
