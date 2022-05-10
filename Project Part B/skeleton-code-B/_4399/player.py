@@ -170,8 +170,8 @@ def dynamic_depth_allocation(board: Board) -> int:
     Returns:
         int: depth
     """
-    if board.n <= 5:
-        return 4
+    # if board.n <= 5:
+    #     return 4
     
     target_rates = [
         0.50, # depth = 1
