@@ -39,6 +39,7 @@ def minimax(board: Board,
             maximizingPlayer: bool):
     # if maximizingPlayer, then player is RED, else BLUE
     player = RED if maximizingPlayer else BLUE
+    opponent = BLUE if maximizingPlayer else RED
     
     # if depth = 0 or node is a terminal node then
     # return the evaluation value of node
@@ -49,13 +50,13 @@ def minimax(board: Board,
         # if there is no winner, return 0
         if board.winner is None:
             return Eval(board=board, player=player), None
-        elif maximizingPlayer and board.winner == RED:
+        elif player == board.winner == RED:
             return math.inf, None
-        elif maximizingPlayer and board.winner == BLUE:
+        elif player == board.winner == BLUE:
             return -math.inf, None
-        elif not maximizingPlayer and board.winner == BLUE:
+        elif opponent == board.winner == BLUE:
             return -math.inf, None
-        elif not maximizingPlayer and board.winner == RED:
+        elif opponent and board.winner == RED:
             return math.inf, None
     
 
