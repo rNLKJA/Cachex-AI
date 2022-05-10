@@ -25,8 +25,6 @@ class Board_4399(Board):
         self.last_player = "blue"
         self.winner = None
         self._turn = 1
-        self.depth = 1
-        self.hex_utilize_rate = 0
     
     def is_odd(self, n: int=None) -> bool:
         """
