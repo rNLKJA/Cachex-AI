@@ -14,6 +14,7 @@ https://www.overleaf.com/read/bvyssryrvdpz [VIEW ONLY]
 from typing import Tuple
 import math
 from copy import deepcopy
+import numpy as np
 
 from referee.game import Game
 
@@ -75,6 +76,7 @@ class Player:
         # RED is always maximizing the game result, BLUE is always minimizing the game result
         # dynamic_depth_allocation determine the recursion depth
         depth = dynamic_depth_allocation(self.board)
+        log(depth)
         if self.colour == RED:
             _, action = minimax(board=self.board,
                             depth=depth,
@@ -87,10 +89,6 @@ class Player:
                             alpha=-math.inf,
                             beta=math.inf, 
                             maximizingPlayer=isMaximizingPlayer(self.colour))   
-            
-        log(isMaximizingPlayer(self.colour))
-        log(depth)
-        log(action)
         return action
     
     def turn(self, player, action):
@@ -167,12 +165,17 @@ def dynamic_depth_allocation(board: Board) -> int:
     Returns:
         int: depth
     """
-    curr_hex_utilize_rate = len(board.available_hexagons()) / (board.n ** 2)
+    curr_hex_utilize_rate = 1 - len(board.available_hexagons()) / (board.n ** 2)
     
-    if (curr_hex_utilize_rate - board.hex_utilize_rate) >= 0.2:
-        board.depth += 1
-    elif board.depth != 1:
-        board.depth -= 1
-    board.hex_utilize_rate = curr_hex_utilize_rate
+    hex_rate_range = np.linspace(3, board.n, board.n//2)**2 / board.n**2
+    hex_rate_range[0] += 0.5
+    # index represent the depth
+    hex_rate_index = np.arange(0, board.n//2)
+    
+    for index, _range in zip(hex_rate_index, hex_rate_range):
+        if curr_hex_utilize_rate > _range:
+            pass
+        else:
+            return index + 1
     
     return board.depth
