@@ -4,7 +4,7 @@
     "number of empty hexagons",
     "number of token in triangular",
     "number of token of each color",
-    "number of token in a capturable diamond shape",
+    "number of token in a capture-able diamond shape",
     "number of token in weakness",
     "estimate steps to win"
   ]
