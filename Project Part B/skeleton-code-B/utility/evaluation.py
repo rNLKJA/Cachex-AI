@@ -31,11 +31,14 @@ def apply_bias(bias: float=MAGIC_NUMBER) -> float:
     Returns:
         float: random assigned bias
     """
-    return random.choice([0, 1]) * bias
+    return random.choice([0, 1]) * bias + 1
 
 # read weights for evaluation functions
 with open("./utility/weights.json", "r") as json_file:
-    weights = np.array(json.load(json_file)['weights'])
+    file = json.load(json_file)
+    positive_weights = np.array(file[0]['positive_weights'])
+
+    nagetive_weights = np.array(file[1]['nagetive_weights'])
     
 def Eval(board: Board, player) -> float:
     """
@@ -48,29 +51,40 @@ def Eval(board: Board, player) -> float:
     Returns:
         float: _description_
     """
-    efuncs = [n_emptyhex, 
+    efuncs_positive = [n_emptyhex, 
                 count_token_in_triangle, 
-                token_counter, 
+                token_counter]
+
+    efuncs_nagetive = [
                 count_token_in_diamond, 
                 count_token_in_weakness,
                 estimate_steps_to_win]
     score = 0
-    
-    opponent = RED if player == 'blue' else BLUE
-    
-    # calculate the number of empty hexagons
-    for func, weight in zip(efuncs, weights):
+   
+
+    for func, weight in zip(efuncs_positive, positive_weights):
+            result = func(board)
+            if type(result) != dict:
+                score += result * weight
+            else:
+                if result == dict():
+                    score += 0
+                if RED in result:
+                    score += result[RED] * weight 
+                if BLUE in result:
+                    score -= result[BLUE] * weight
+
+    for func, weight in zip(efuncs_nagetive, nagetive_weights):
         result = func(board)
         if type(result) != dict:
             score += result * weight
         else:
             if result == dict():
                 score += 0
-            if player in result:
-                score += result[player] * weight 
-            if opponent in result:
-                score -= result[opponent] * weight
-
+            if RED in result:
+                score -= result[RED] * weight 
+            if BLUE in result:
+                score += result[BLUE] * weight
     return score * apply_bias()
 
 # ---------------------------------------------------

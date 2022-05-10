@@ -46,11 +46,11 @@ class Player:
             if input("| Do you want to steal the tile? [Y/n]: ").lower() in ['yes', 'y']:
                 return (STEAL,)
 
-        counter = token_counter(self.board,self.n)
+        counter = token_counter(self.board)
         # triangle = count_token_in_triangle(self.board,self.n)
-        diamond = count_token_in_diamond(self.board,self.n)
-        weakness = count_token_in_weakness(self.board,self.n)
-        steps = estimate_steps_to_win(self.board,self.n)
+        diamond = count_token_in_diamond(self.board)
+        weakness = count_token_in_weakness(self.board)
+        steps = estimate_steps_to_win(self.board)
         
         print('token count ',counter)
         # print('token in triangle count ', triangle)

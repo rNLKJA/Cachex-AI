@@ -87,6 +87,7 @@ def minimax(board: Board,
                 alpha = max_score
             if alpha >= beta:
                 break
+     
         return max_score, max_action
     else:
         # initialize the minimum score to inf
@@ -104,6 +105,7 @@ def minimax(board: Board,
                                         alpha=alpha,
                                         beta=beta,
                                         maximizingPlayer=True)
+                                       
             if eval_score <= min_score:
                 min_score = eval_score
                 min_action = action
@@ -112,6 +114,7 @@ def minimax(board: Board,
                 beta = min_score    
             if alpha >= beta:
                 break
+      
         return min_score, min_action
 
 def switch_minimax_player(player: str) -> bool:

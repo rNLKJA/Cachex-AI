@@ -60,8 +60,8 @@ class Player:
         of the game, select an action to play.
         """
         # enforce game play on the first two move
-        if self.board._turn <= 2:
-            return enforced_gamestart_play(n=self.board.n, player=self.colour, board=self.board)
+        # if self.board._turn <= 2:
+        #     return enforced_gamestart_play(n=self.board.n, player=self.colour, board=self.board)
         
         # minimax will always try to maximizing the game value
         # if only one step left to win the game, then place that action without minimax calculation
@@ -78,17 +78,20 @@ class Player:
         depth = dynamic_depth_allocation(self.board)
         log(depth)
         if self.colour == RED:
-            _, action = minimax(board=self.board,
+            score, action = minimax(board=self.board,
                             depth=depth,
                             alpha=-math.inf,
                             beta=math.inf, 
                             maximizingPlayer=isMaximizingPlayer(self.colour))
+
         else:
-            _, action = minimax(board=self.board,
+            score, action = minimax(board=self.board,
                             depth=depth,
                             alpha=-math.inf,
                             beta=math.inf, 
-                            maximizingPlayer=isMaximizingPlayer(self.colour))   
+                            maximizingPlayer=isMaximizingPlayer(self.colour)) 
+
+            
         return action
     
     def turn(self, player, action):

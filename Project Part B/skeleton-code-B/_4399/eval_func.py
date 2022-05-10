@@ -4,6 +4,7 @@ from re import T
 from utility.board import Board_4399 as Board # import custom board
 from numpy import zeros, array, roll, vectorize
 import math
+from _4399.A_star import AStar
 
 _ADD = lambda a, b: (a[0] + b[0], a[1] + b[1])
 
@@ -37,12 +38,11 @@ _SWAP_PLAYER = { 0: 0, 1: 2, 2: 1 }
 
 
 # count the current number of tokens for red/blue in the board 
-def token_counter(board : Board, board_size=None): 
-    board_size = board.n
+def token_counter(board : Board): 
 
     result = {}
-    for r in range(board_size):
-            for q in range(board_size):
+    for r in range(board.n):
+            for q in range(board.n):
                 if board.is_occupied(coord=(r, q)):
                     token = board.__getitem__(coord=(r, q))
                     if token not in result:
@@ -52,12 +52,10 @@ def token_counter(board : Board, board_size=None):
     return result
 
 # count how many tokens are in a stable_triangle pattern
-def count_token_in_triangle(board : Board):
-    
-    board_size = board.n
+def count_token_in_triangle(board : Board): 
     result = {}
-    for r in range(board_size):
-            for q in range(board_size):
+    for r in range(board.n):
+            for q in range(board.n):
                 if board.is_occupied(coord=(r, q)):
                     token = board.__getitem__(coord=(r, q))
                     if token_in_triangle(board, coord=(r, q)):
@@ -68,11 +66,10 @@ def count_token_in_triangle(board : Board):
     return result
 
 # count how many tokens are a diamond pattern that will be captured
-def count_token_in_diamond(board : Board, board_size=None): 
+def count_token_in_diamond(board : Board): 
     result = {}
-    board_size = board.n
-    for r in range(board_size):
-            for q in range(board_size):
+    for r in range(board.n):
+            for q in range(board.n):
                 if board.is_occupied(coord=(r, q)):
                     token = board.__getitem__(coord=(r, q))
                     if token_in_diamond(board, coord=(r, q)):
@@ -119,6 +116,7 @@ def calculate_Euclid_distance_square(coord1, coord2):
     B_x, B_y = coord2
 
     return ((A_x-B_x)^2 + (A_y-B_y)^2)
+         
 
 def token_in_diamond(board : Board, coord):
     opp_type = board._data[coord]
@@ -137,11 +135,10 @@ def token_in_diamond(board : Board, coord):
     return False
 
 # count how many tokens are a weak pattern that will be attacked
-def count_token_in_weakness(board : Board, board_size=None):
-    board_size = board.n
+def count_token_in_weakness(board : Board):
     result = {}
-    for r in range(board_size):
-            for q in range(board_size):
+    for r in range(board.n):
+            for q in range(board.n):
                 if board.is_occupied(coord=(r, q)):
                     token = board.__getitem__(coord=(r, q))
                     if token_in_weakness(board, coord=(r, q)):
@@ -149,7 +146,7 @@ def count_token_in_weakness(board : Board, board_size=None):
                             result[token] = 1
                         else: result[token] += 1   
 
-    return result  
+    return result    
 
 def token_in_weakness(board : Board, coord):
     opp_type = board._data[coord]
@@ -170,17 +167,29 @@ def token_in_weakness(board : Board, coord):
     
     return False
 
-def estimate_steps_to_win(board, board_size=None):
-    board_size = board.n
+def estimate_steps_to_win(board):
     result = {}
-    for r in range(board_size):
-            for q in range(board_size):
+    for r in range(board.n):
+            for q in range(board.n):
                 if board._data[(r,q)] != 0:
                     player = board.__getitem__(coord=(r, q))
                     reachable = board.connected_coords((r, q))
                     axis_vals = [coord[_PLAYER_AXIS[player]] for coord in reachable]
-                    steps_to_win = board_size - ( max(axis_vals) - min(axis_vals) + 1)
-                    
+                    player_num = board._data[(r, q)]
+
+                    # max_token is the token that is closest to the upper bounds, min_token is closest to the lower bounds
+                    max_token = [ coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == max(axis_vals)][0]
+                    min_token = [coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == min(axis_vals)][0]
+
+                    if _PLAYER_AXIS[player]:
+                        sub_steps1 = min([AStar(Board = board, start= max_token, goal= (i,board.n - 1), self_player = player_num) for i in range(board.n)])
+                        sub_steps2 = min([AStar(Board = board, start= min_token, goal= (i,0), self_player = player_num) for i in range(board.n)])
+                    else: 
+                        sub_steps1 =  min([AStar(Board = board, start= max_token, goal= (board.n - 1,i), self_player = player_num) for i in range(board.n)])
+                        sub_steps2 = min([AStar(Board = board, start= min_token, goal= (0,i), self_player = player_num) for i in range(board.n)])
+
+                    steps_to_win = sub_steps1 + sub_steps2
+
                     if player not in result:
                         result[player] = steps_to_win
                     if player in result and steps_to_win < result[player]:
