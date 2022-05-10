@@ -228,8 +228,8 @@ def count_token_in_diff_hex_location(board: Board):
     for r in range(board.n):
         for q in range(board.n):
             if board[(r, q)] == RED:
-                result[RED] += 1
+                result[RED] += s_matrix[r][q]
             elif board[(r, q)] == BLUE:
-                result[BLUE] += 1
+                result[BLUE] += s_matrix[r][q]
     
     return result
