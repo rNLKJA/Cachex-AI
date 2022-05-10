@@ -38,7 +38,7 @@ with open("./utility/weights.json", "r") as json_file:
     file = json.load(json_file)
     positive_weights = np.array(file[0]['positive_weights'])
 
-    nagetive_weights = np.array(file[1]['nagetive_weights'])
+    negative_weights = np.array(file[1]['negative_weights'])
     
 def Eval(board: Board, player) -> float:
     """
@@ -53,19 +53,20 @@ def Eval(board: Board, player) -> float:
     """
     efuncs_positive = [n_emptyhex, 
                 count_token_in_triangle, 
-                token_counter]
+                token_counter,
+                count_token_in_diff_hex_location]
 
-    efuncs_nagetive = [
+    efuncs_negative = [
                 count_token_in_diamond, 
                 count_token_in_weakness,
                 estimate_steps_to_win]
     score = 0
-   
 
     for func, weight in zip(efuncs_positive, positive_weights):
             result = func(board)
             if type(result) != dict:
                 score += result * weight
+                
             else:
                 if result == dict():
                     score += 0
@@ -74,7 +75,7 @@ def Eval(board: Board, player) -> float:
                 if BLUE in result:
                     score -= result[BLUE] * weight
 
-    for func, weight in zip(efuncs_nagetive, nagetive_weights):
+    for func, weight in zip(efuncs_negative, negative_weights):
         result = func(board)
         if type(result) != dict:
             score += result * weight

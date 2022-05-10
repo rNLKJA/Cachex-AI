@@ -15,6 +15,7 @@ from typing import Tuple
 import math
 from copy import deepcopy
 import numpy as np
+import sys
 
 from referee.game import Game
 
@@ -54,14 +55,14 @@ class Player:
         self.name = "4399 Strategy Cachex Game Agent"
         
 
-    def action(self):
+    def action(self, enforceGamePlayer=True):
         """
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
         # enforce game play on the first two move
-        # if self.board._turn <= 2:
-        #     return enforced_gamestart_play(n=self.board.n, player=self.colour, board=self.board)
+        if self.board._turn <= 2 and enforceGamePlayer:
+            return enforced_gamestart_play(n=self.board.n, player=self.colour, board=self.board)
         
         # minimax will always try to maximizing the game value
         # if only one step left to win the game, then place that action without minimax calculation
@@ -76,7 +77,8 @@ class Player:
         # RED is always maximizing the game result, BLUE is always minimizing the game result
         # dynamic_depth_allocation determine the recursion depth
         depth = dynamic_depth_allocation(self.board)
-        log(depth)
+        # log(depth)
+    
         if self.colour == RED:
             score, action = minimax(board=self.board,
                             depth=depth,
@@ -169,7 +171,7 @@ def dynamic_depth_allocation(board: Board) -> int:
         int: depth
     """
     if board.n <= 5:
-        return 8
+        return 4
     
     target_rates = [
         0.50, # depth = 1

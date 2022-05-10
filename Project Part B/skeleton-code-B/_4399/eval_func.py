@@ -3,6 +3,7 @@ from dis import dis
 from re import T
 from utility.board import Board_4399 as Board # import custom board
 from numpy import zeros, array, roll, vectorize
+import numpy as np
 import math
 from _4399.A_star import AStar
 
@@ -15,6 +16,8 @@ _PLAYER_AXIS = {
     "red": 0, # Red aims to form path in r/0 axis
     "blue": 1 # Blue aims to form path in q/1 axis
 }   
+
+RED, BLUE = 'red', 'blue'
 
 # The pattern that needs to be used to measure the board score
 
@@ -194,4 +197,39 @@ def estimate_steps_to_win(board):
                         result[player] = steps_to_win
                     if player in result and steps_to_win < result[player]:
                         result[player] = steps_to_win
+    return result
+
+# hex cell scores
+def score_matrix(board_size: int):
+    """
+    This function should return a score matrix where the corner number is big and 
+    gradually decrase to the center
+    """
+    score_matrix = np.zeros((board_size, board_size)) + int((board_size + 3)/2 - 1)
+
+    margin = 1
+    score = board_size
+    for n in range(1, board_size//2):
+        tmp_matrix = np.zeros((board_size-n-margin, board_size-n-margin)) + int((board_size + 3)/2) - n
+        score_matrix[n: board_size-n, n: board_size-n] = tmp_matrix
+        margin += 1
+    if board_size % 2 == 1:
+        score_matrix[int(board_size/2)][int(board_size/2)] = 1
+    return score_matrix
+
+def count_token_in_diff_hex_location(board: Board):
+    s_matrix = score_matrix(board_size = board.n)
+    
+    result = {
+        BLUE: 0,
+        RED: 0
+    }
+    
+    for r in range(board.n):
+        for q in range(board.n):
+            if board[(r, q)] == RED:
+                result[RED] += 1
+            elif board[(r, q)] == BLUE:
+                result[BLUE] += 1
+    
     return result
