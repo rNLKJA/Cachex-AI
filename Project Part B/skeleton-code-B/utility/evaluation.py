@@ -61,12 +61,12 @@ def Eval(board: Board, player) -> float:
                 count_token_in_weakness,
                 estimate_steps_to_win]
     score = 0
+   
 
     for func, weight in zip(efuncs_positive, positive_weights):
             result = func(board)
             if type(result) != dict:
                 score += result * weight
-                
             else:
                 if result == dict():
                     score += 0

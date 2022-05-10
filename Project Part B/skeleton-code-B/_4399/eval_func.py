@@ -184,7 +184,11 @@ def estimate_steps_to_win(board):
                     max_token = [ coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == max(axis_vals)][0]
                     min_token = [coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == min(axis_vals)][0]
 
+                    # for red : 0 player, we find the closest points in connected tokens to upper and lower bound.
+                    # calculate the shortest steps and add them together as the shortest steps to win.
                     if _PLAYER_AXIS[player]:
+
+                        # the shortest steps from steps of the starting to each point in boundary
                         sub_steps1 = min([AStar(Board = board, start= max_token, goal= (i,board.n - 1), self_player = player_num) for i in range(board.n)])
                         sub_steps2 = min([AStar(Board = board, start= min_token, goal= (i,0), self_player = player_num) for i in range(board.n)])
                     else: 
