@@ -40,7 +40,6 @@ with open("./utility/weights.json", "r") as json_file:
 def Eval(board: Board, player) -> float:
     """
     Evaluation functions
-    TODO: add docstring
 
     Args:
         board (Board): _description_
@@ -96,7 +95,9 @@ def n_emptyhex(board: Board) -> int:
 
 def winner(board: Board, player: str) -> int:
     """
-    TODO: complete the docstring
+    DEPRECATED
+    
+    check current game winner
 
     Args:
         board (Board): _description_

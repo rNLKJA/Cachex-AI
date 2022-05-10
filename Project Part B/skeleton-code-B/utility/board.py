@@ -25,6 +25,8 @@ class Board_4399(Board):
         self.last_player = "blue"
         self.winner = None
         self._turn = 1
+        self.depth = 1
+        self.hex_utilize_rate = 0
     
     def is_odd(self, n: int=None) -> bool:
         """
@@ -59,11 +61,11 @@ class Board_4399(Board):
     
     def update(self, player:str, action: Tuple[str, int, int]) -> None:
         """
-        TODO: add docstring
+        Update current board with senitized action.
 
         Args:
-            player (str): _description_
-            action (Tuple[str, int, int]): _description_
+            player (str): player color
+            action (Tuple[str, int, int]): either place a stone or steal a stone
         """
         
         if action == STEAL():

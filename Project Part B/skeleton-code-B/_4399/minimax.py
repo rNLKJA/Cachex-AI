@@ -33,11 +33,13 @@ _PLAYER_AXIS = {
 }
 
 def minimax(board: Board, 
-            player: str,
             depth: int,
             alpha: float,
             beta: float, 
             maximizingPlayer: bool):
+    # if maximizingPlayer, then player is RED, else BLUE
+    player = RED if maximizingPlayer else BLUE
+    
     # if depth = 0 or node is a terminal node then
     # return the evaluation value of node
     if depth == 0 or game_end(board=board):
@@ -56,12 +58,10 @@ def minimax(board: Board,
         elif not maximizingPlayer and board.winner == RED:
             return math.inf, None
     
-    
+
     # find all valid actions
     v_actions = get_valid_actions(board)
 
-    
-    # TODO: break the minimax if the next game action does terminate the game
     # AI try to maximizing its performance    
     if maximizingPlayer:
         # initialise the maximum score to -inf
@@ -74,7 +74,6 @@ def minimax(board: Board,
             temp_board.update(player=player, action=action)
 
             eval_score, _ = minimax(board=temp_board, 
-                                        player=player,
                                         depth=depth-1,
                                         alpha=alpha,
                                         beta=beta,
@@ -91,16 +90,15 @@ def minimax(board: Board,
     else:
         # initialize the minimum score to inf
         min_score, min_action = math.inf, None
-        next_player = RED if player == 'blue' else BLUE
         
         # for each action
         # copy the current board and recalculate the minimax score
         for action in v_actions:
             
             temp_board = deepcopy(board)
-            temp_board.update(player=next_player, action=action)
+            temp_board.update(player=player, action=action)
+            
             eval_score, _ = minimax(board=temp_board,
-                                    player=next_player,
                                         depth=depth-1,
                                         alpha=alpha,
                                         beta=beta,
@@ -141,13 +139,13 @@ def game_end(board: Board):
 
 def get_valid_actions(board: Board) -> List[Tuple[int, int]]:
     """
-    TODO: add docstring
+    Obtain valid actions based on board empty hexagonal cells
 
     Args:
-        board (Board): _description_
+        board (Board): cachex game board
 
     Returns:
-        List[Tuple[int, int]]: _description_
+        List[Tuple[int, int]]: list of valid actions
     """
     valid_actions = set()
     

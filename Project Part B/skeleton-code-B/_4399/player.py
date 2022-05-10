@@ -64,6 +64,7 @@ class Player:
         
         # minimax will always try to maximizing the game value
         # if only one step left to win the game, then place that action without minimax calculation
+        # if more steps are needed, then execute the minimax iteration
         v_actions = get_valid_actions(self.board)
         for action in v_actions: 
             temp_board = deepcopy(self.board)
@@ -71,13 +72,25 @@ class Player:
             if game_end(board=temp_board):
                 return action 
         
-
-        # if more steps are needed, then execute the minimax iteration
-        _, action = minimax(board=self.board,
-                            player=self.colour,
-                            depth=3,
+        # RED is always maximizing the game result, BLUE is always minimizing the game result
+        # dynamic_depth_allocation determine the recursion depth
+        depth = dynamic_depth_allocation(self.board)
+        if self.colour == RED:
+            _, action = minimax(board=self.board,
+                            depth=depth,
                             alpha=-math.inf,
-                            beta=math.inf, maximizingPlayer=True)
+                            beta=math.inf, 
+                            maximizingPlayer=isMaximizingPlayer(self.colour))
+        else:
+            _, action = minimax(board=self.board,
+                            depth=depth,
+                            alpha=-math.inf,
+                            beta=math.inf, 
+                            maximizingPlayer=isMaximizingPlayer(self.colour))   
+            
+        log(isMaximizingPlayer(self.colour))
+        log(depth)
+        log(action)
         return action
     
     def turn(self, player, action):
@@ -96,15 +109,17 @@ class Player:
 
 def isMaximizingPlayer(player: str) -> bool:
     """
-    TODO: complete docstring
+    TA function use to determine either a player is maximizing the game result or vice versa
+    
+    * red player always try to maximizing the game result
+    * blue player always try to minimizing the game result
 
     Args:
-        player (_type_): _description_
-
+        player (str): player colour string
     Returns:
-        _type_: _description_
+        bool: return the target player is a maximizing player or not
     """
-    return MIN_PLAYER if player == 'red' else MAX_PLAYER
+    return MAX_PLAYER if player == RED else MIN_PLAYER
 
 def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int, int]:
     """
@@ -139,6 +154,25 @@ def enforced_gamestart_play(n: int, player: str, board: Board) -> Tuple[str, int
     else:
         if player is BLUE and board.is_occupied((1, 1)):
             return STEAL()
-        # TODO: choose a point from the main axis
         else:
             return PLACE(coord = (1, 1))
+
+def dynamic_depth_allocation(board: Board) -> int:
+    """
+    Return a depth limit number for minimax to terminate the tree search
+
+    Args:
+        board (Board): Cachex game board object
+
+    Returns:
+        int: depth
+    """
+    curr_hex_utilize_rate = len(board.available_hexagons()) / (board.n ** 2)
+    
+    if (curr_hex_utilize_rate - board.hex_utilize_rate) >= 0.2:
+        board.depth += 1
+    elif board.depth != 1:
+        board.depth -= 1
+    board.hex_utilize_rate = curr_hex_utilize_rate
+    
+    return board.depth
