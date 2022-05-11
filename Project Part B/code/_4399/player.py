@@ -174,8 +174,9 @@ def dynamic_depth_allocation(board: Board) -> int:
     #     return 4
     
     target_rates = [
-        0.30, # depth = 1
+        0.15, # depth = 1
         0.10,
+        0.05,
     ]
 
     empty_rate = len(board.available_hexagons()) / (board.n ** 2)
