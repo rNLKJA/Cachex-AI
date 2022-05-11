@@ -170,6 +170,7 @@ def token_in_weakness(board : Board, coord):
     
     return False
 
+# time complexity is to high, won't be used for evaluation funcion
 def estimate_steps_to_win(board):
     result = {}
 
