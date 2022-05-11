@@ -58,8 +58,8 @@ def Eval(board: Board, player) -> float:
 
     efuncs_negative = [
                 count_token_in_diamond, 
-                count_token_in_weakness,
-                estimate_steps_to_win]
+                count_token_in_weakness]
+                # estimate_steps_to_win]
     score = 0
 
     for func, weight in zip(efuncs_positive, positive_weights):
