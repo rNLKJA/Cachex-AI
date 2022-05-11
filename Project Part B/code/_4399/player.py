@@ -174,11 +174,8 @@ def dynamic_depth_allocation(board: Board) -> int:
     #     return 4
     
     target_rates = [
-        0.50, # depth = 1
-        0.40,
-        0.30,
+        0.30, # depth = 1
         0.20,
-        0.15,
         0.10,
         0.05,
         0.025

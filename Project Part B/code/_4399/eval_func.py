@@ -172,35 +172,61 @@ def token_in_weakness(board : Board, coord):
 
 def estimate_steps_to_win(board):
     result = {}
+
+    connected_nodes = []
+
     for r in range(board.n):
             for q in range(board.n):
                 if board._data[(r,q)] != 0:
                     player = board.__getitem__(coord=(r, q))
                     reachable = board.connected_coords((r, q))
-                    axis_vals = [coord[_PLAYER_AXIS[player]] for coord in reachable]
-                    player_num = board._data[(r, q)]
+                    if reachable not in connected_nodes :
+                        connected_nodes.append(reachable)
 
-                    # max_token is the token that is closest to the upper bounds, min_token is closest to the lower bounds
-                    max_token = [ coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == max(axis_vals)][0]
-                    min_token = [coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == min(axis_vals)][0]
+    # print('connected_nodes', connected_nodes)                    
 
-                    # for red : 0 player, we find the closest points in connected tokens to upper and lower bound.
-                    # calculate the shortest steps and add them together as the shortest steps to win.
-                    if _PLAYER_AXIS[player]:
-                        # the shortest steps from steps of the starting to each point in boundary
-                        sub_steps1 = min([AStar(Board = board, start= max_token, goal= (i,board.n - 1), self_player = player_num) for i in range(board.n)])
-                        sub_steps2 = min([AStar(Board = board, start= min_token, goal= (i,0), self_player = player_num) for i in range(board.n)])
-                        
-                    else: 
-                        sub_steps1 =  min([AStar(Board = board, start= max_token, goal= (board.n - 1,i), self_player = player_num) for i in range(board.n)])
-                        sub_steps2 = min([AStar(Board = board, start= min_token, goal= (0,i), self_player = player_num) for i in range(board.n)])
+    # track how many times astar is
+    Astar_count = 0
 
-                    steps_to_win = sub_steps1 + sub_steps2
+    for reachable in connected_nodes:
 
-                    if player not in result:
-                        result[player] = steps_to_win
-                    if player in result and steps_to_win < result[player]:
-                        result[player] = steps_to_win
+        player = board.__getitem__(reachable[0])
+        axis_vals = [coord[_PLAYER_AXIS[player]] for coord in reachable]
+        player_num = board._data[reachable[0]]
+
+        max_score = max(axis_vals)
+        min_score = min(axis_vals)
+
+        # max_token is the token that is closest to the upper bounds, min_token is closest to the lower bounds
+        max_token = [ coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == max_score][0]
+        min_token = [coord  for coord in reachable if coord[_PLAYER_AXIS[player]] == min_score][0]
+
+
+        # for blue : 1 player, we find two closest points in connected tokens to upper and lower bound.
+        # calculate their shortest steps to the points with same x asix on boundary and add them together as the shortest steps to win.
+        if _PLAYER_AXIS[player]:
+
+            Astar_count += 2
+            # the shortest steps from steps of the starting to each point in boundary
+            sub_steps1 = AStar(Board = board, start= max_token, goal= (max_token[0],board.n - 1), self_player = player_num)
+            sub_steps2 = AStar(Board = board, start= min_token, goal= (min_token[0],0), self_player = player_num)
+            
+        else: 
+            Astar_count += 2
+            sub_steps1 =  AStar(Board = board, start= max_token, goal= (board.n - 1,max_token[1]), self_player = player_num)
+            sub_steps2 = AStar(Board = board, start= min_token, goal= (0,min_token[1]), self_player = player_num) 
+
+        steps_to_win = sub_steps1 + sub_steps2
+
+
+
+
+        if player not in result:
+            result[player] = steps_to_win
+        if player in result and steps_to_win < result[player]:
+            result[player] = steps_to_win 
+
+    # print (result)
     return result
 
 # hex cell scores
