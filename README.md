@@ -1,89 +1,132 @@
-# 2022 S1 COMP30024 Artificial Intelligence Project
-> Cachex is a two-player connection game of strategy anticipation and sabotage. Establish efficient territorial control by constructioin of geometric patterns whiule sabotaging the best laid plans of your opponent'ss territorial instructions and unite patterns to victory!
+<div align="center">
 
-> Cachex is a perfect-information two-player game played on an n × n rhombic, hexagonally tiled board, based on the strategy game Hex.
+# Cachex AI
 
-## Project Part A: Searching
+A game-playing AI agent for **Cachex**, a hex-based connection game, built for the University of Melbourne **COMP30024 Artificial Intelligence** project (Semester 1, 2022).
 
-This part of project will solve a simple search-based problem on _Cachex_ game board by implmeneting a heuristic, A\* path finding algorithm.
+[![Python](https://img.shields.io/badge/Python-3.6-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![University of Melbourne](https://img.shields.io/badge/University%20of%20Melbourne-COMP30024-094183?style=for-the-badge)](https://handbook.unimelb.edu.au/2022/subjects/comp30024)
+[![Algorithm](https://img.shields.io/badge/Algorithm-Minimax%20%2B%20Alpha--Beta-orange?style=for-the-badge)](#approach)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-The aims for Project Part A is build a agent that:
+</div>
 
-- refresh Pyhon programming skills
-- explore algorithms learned in lecture
-- familiar with Cachex
+---
 
-```bash
-# to run the AStar search script, please enter the code directory and run the following command
-# python -m search input.json [block-type]
-# [block-type could be None, Red, or Blue], if None then skip this field
-# e.g. where search block-type is None
-python -m search sample_input.json 
+## Overview
 
-# e.g. where search block-type is Blue
-python -m search sample_input.json Blue
+Cachex is a perfect-information, two-player connection game played on an *n* × *n* rhombic, hexagonally tiled board. It is based on the classic strategy game **Hex**. Two players, Red and Blue, take turns placing tiles. Red aims to form an unbroken chain of its tiles connecting the top and bottom edges of the board, while Blue aims to connect the left and right edges. The first player to complete a connection across their two sides wins.
+
+The board also supports a *capture* rule and a one-off *steal* move, so the agent has to reason about more than just shortest paths.
+
+This repository holds two pieces of work that build on each other:
+
+- **Part A — Searching.** A standalone solver that finds the shortest path between two cells on a Cachex board using the **A\* search algorithm**, treating opponent tiles as obstacles. This is the foundation for reasoning about connections.
+- **Part B — Competitive game agent.** A full playing agent that chooses its moves using **minimax search with alpha-beta pruning**, guided by a hand-crafted evaluation function. It is designed to beat random, greedy, and shallow adversarial opponents.
+
+## Approach
+
+### Part A — A\* shortest-path search
+
+The agent models the board as a graph of `HexNode` cells, each knowing its valid neighbours (six hex directions, with the two major-axis diagonals removed). A\* then finds the lowest-cost path from a start cell to a goal cell:
+
+- **Cost (g):** one step per tile traversed.
+- **Heuristic (h):** a Minkowski distance, configurable as Manhattan (*p* = 1) or Euclidean (*p* = 2), which stays admissible on the hex grid.
+- **Blocks:** tiles of the opponent's colour are treated as impassable, so the path the agent finds is the real shortest connection available to it.
+
+### Part B — Minimax with alpha-beta pruning
+
+The competitive agent searches the game tree to choose its move:
+
+- **Minimax + alpha-beta pruning.** Red plays as the maximising player and Blue as the minimising player. Alpha-beta pruning cuts off branches that cannot affect the result, so the agent searches deeper within the same time budget.
+- **Dynamic search depth.** Rather than a fixed depth, the agent adjusts how far it looks ahead based on how full the board is, searching deeper as the board empties out and the branching factor falls.
+- **Evaluation function.** Non-terminal states are scored by a weighted mix of features defined in `weights.json`: number of empty cells, tiles sitting in strong *triangle* formations, tile counts per colour, and positional value (corners and edges score higher than the centre). Negative features penalise tiles in capture-prone *diamond* shapes and weak formations. An A\* "steps to win" estimate is also implemented as an optional feature.
+- **Opening book.** The first couple of moves are hard-coded from analysis of the game: on a size-3 board Blue has a forced win, and on larger boards the agent opens on a strong cell or uses the steal move when the opponent has taken it.
+
+## Repository Structure
+
+```
+Cachex-AI/
+├── Project Part A/
+│   ├── code/
+│   │   ├── search/          # entry point (python -m search ...)
+│   │   ├── cachex/          # CachexBoard + HexNode (A* lives here)
+│   │   ├── astar/           # A* f/g/h score helper
+│   │   ├── constant/        # shared constants
+│   │   ├── error/           # custom exceptions
+│   │   └── sample_input*.json
+│   ├── notebook/            # A* development notebooks and benchmark charts
+│   ├── report/              # written report (PDF)
+│   └── specification/       # project and game spec (PDF)
+│
+├── Project Part B/
+│   ├── code/
+│   │   ├── _4399/           # the agent: player, minimax, eval_func, A_star
+│   │   ├── utility/         # board, evaluation, weights.json, helpers
+│   │   └── referee/         # supplied driver that runs a match
+│   └── skeleton-code-B/     # original skeleton, incl. sample opponents
+│
+├── environment.yml          # conda environment (Python 3.6)
+├── requirements.txt         # pip dependencies (numpy, scipy)
+└── LICENSE                  # MIT
 ```
 
-- familiar with Cache
+## Getting Started
 
-## Project Part B: Competitive Game Agent
+### Prerequisites
 
-The team need to design and implement a program to play the game of Cachex. That is, given information about the evolving state of the game.
-- Opponents who choose randomly from their set of allowed actions each turn.
-- "Greedy" opponents who select the most immediately promising action available each turn, without considering your player's responses (for various definitions of 'most promising').
-- Opponents using the adversarial search techniques discussed in class and a simpple evaluation function to look an increasing number of turns ahead.
+The project was assessed on Python 3.6 with NumPy and SciPy. The simplest way to match that is conda:
 
 ```bash
-# to run the game agent, please enter the following command
-python -m referee <n> <player1> <player2>
-
-# e.g. human player vs. random selection agent with a board size n=5
-python -m referee 5 human_player random_play_agent
-
-# for more information about referee please check the helper function via -h or --help
-```
-
-## _Cache_ Game
-
-Cachex is a perfect-information two-player game played on an n×nrhombic, hexagonally tiled board, based on the strategy game Hex. Two players (named Red and Blue) compete, with the goal to form a connection between the opposing sides of the board corresponding to their respective color. More information please check **[AI_chachex_spec.pdf]("https://github.com/chuangyu-hscy/legendary-succotash/blob/master/COMP30024%20Project/COMP30024%20Project%20Part%20A/specification/AI_cachex_spec.pdf")**.
-
-## Project Dependencies
-
-Due to science faculty assessment marking constraints that the tests will run with **python 3.6** on the student **Unix** machines.
-Hence authors using conda to build the working environment.
-
-```bash
-# please check the conda_env.txt file and requirements.txt file does exist
-# create conda environment
+# create and activate the environment
 conda create -n COMP30024 --file environment.yml
+conda activate COMP30024
 
-# after set up conda environment, please install package dependencies
+# install the pip dependencies
 pip install -r requirements.txt
 ```
 
-**TO RUN IMPLMENTED CODE**
+### Running Part A (A\* search)
 
-Most of algorithm and code logic and structure are implemented via a jupyter notebook. Then convert into various `.py` files.
+From `Project Part A/code/`, run the search module against an input file. An optional block type (`Red` or `Blue`) marks which colour's tiles act as obstacles:
 
-To test the completed code, please run the line below.
+```bash
+cd "Project Part A/code"
 
+# find a path with no blocking colour
+python -m search sample_input.json
+
+# find a path treating Blue tiles as blocks
+python -m search sample_input.json Blue
 ```
-# activate conda environment first
-conda activate COMP30024
 
-# run the main program
-python3 main.py
+The program prints the path length followed by each `(r, q)` coordinate along the shortest path.
+
+### Running Part B (a match between agents)
+
+From `Project Part B/code/`, the supplied referee runs a full game between two player packages. The pattern is:
+
+```bash
+python -m referee <n> <player1> <player2>
 ```
 
-## Project Report
+where `n` is the board size and each player argument is a Python package containing a `Player` class. The agent in this repository is the `_4399` package. For example, to play the agent (as Red) against the bundled random agent on a size-5 board:
 
-| Project Part | Overleaf link |
-| :---- | :---- |
-| Part A | https://www.overleaf.com/read/rjtbjbrbgkqb |
-| Part B | https://www.overleaf.com/read/bvyssryrvdpz |
+```bash
+cd "Project Part B/code"
 
-## Others
+# this repo's agent vs. a random opponent
+python -m referee 5 _4399 skeleton-code-B.random_play_agent
 
-<p>More notes about the project is available on <a href='https://www.notion.so/huangsunchuangyu/Project-Part-A-97ad43542a9a42d39433a14d834102f8'><img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white" alt='notion'></a></p>
+# a human vs. this repo's agent
+python -m referee 5 skeleton-code-B.human_player _4399
+```
 
-Project license is available at [HERE](https://github.com/chuangyu-hscy/legendary-succotash/blob/master/COMP30024%20Project/LICENSE). Please notice this repository won't be pulic until Unimelb 2022 Semester 1 COMP30024 course ends. For academic intergrity and your honesty, please notice that all code fragments should not directly copy paste to your code. In other cases all codes under folder `COMP30024 Project` are followed by MIT LICENSE.
+Run `python -m referee -h` for the full list of options, including time and space limits, verbosity, and game logging.
+
+## Notes
+
+- This was a two-person project (team `_4399`): **Sunchuangyu "Rin" Huang** and **Wei Zhao**.
+- Most of the logic was first prototyped in the Jupyter notebooks under `Project Part A/notebook/` and then refactored into the `.py` modules, so the notebooks are a useful window into the design process and the A\* benchmarking.
+- Australian spelling is used throughout.
+- Released under the MIT Licence. If you are a current COMP30024 student, please treat this as reference only and respect academic integrity rather than copying any code.
