@@ -1,4 +1,4 @@
 # define global variables
-RED = 'Red'
-BLUE = 'Blue'
-BLOCK = 'Block'
+RED = "Red"
+BLUE = "Blue"
+BLOCK = "Block"

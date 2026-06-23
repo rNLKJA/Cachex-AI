@@ -1,17 +1,19 @@
 """
 
 Cachex Game Agent (MINIMAX+ALPHA_BETA)
-Team: _4399 
+Team: _4399
 Member 1: {email: sunchuangyuh@student.unimelb.edu.au, student id: 1118472}
 Member 2: {email: weizhao1@student.unimelb.edu.au, student id: 1118649}
 
 Utility functions
 
 """
-from typing import Tuple
 
 import logging
+from typing import Tuple
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
 
 def PLACE(coord: (int, int)) -> Tuple[str, int, int]:
     """
@@ -25,7 +27,8 @@ def PLACE(coord: (int, int)) -> Tuple[str, int, int]:
     """
     r, q = coord
     return ("PLACE", r, q)
-    
+
+
 def STEAL() -> Tuple[str,]:
     """
     Perform STEAL action
@@ -33,7 +36,8 @@ def STEAL() -> Tuple[str,]:
     Returns:
         _type_: _description_
     """
-    return ('STEAL',)
+    return ("STEAL",)
+
 
 def log(content) -> None:
     """
@@ -43,4 +47,3 @@ def log(content) -> None:
         content (optional): logging content
     """
     logging.info(content)
-    

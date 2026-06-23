@@ -8,6 +8,7 @@ Feel free to use and/or modify them to help you develop your program.
 
 from itertools import islice
 
+
 def apply_ansi(str, bold=True, color=None):
     """
     Wraps a string with ANSI control codes to enable basic terminal-based
@@ -31,6 +32,7 @@ def apply_ansi(str, bold=True, color=None):
         color_code = "\033[34m"
     return f"{bold_code}{color_code}{str}\033[0m"
 
+
 def print_coordinate(r, q, **kwargs):
     """
     Output an axial coordinate (r, q) according to the format instructions.
@@ -38,6 +40,7 @@ def print_coordinate(r, q, **kwargs):
     Any keyword arguments are passed through to the print function.
     """
     print(f"({r},{q})", **kwargs)
+
 
 def print_board(n, board_dict, message="", ansi=False, **kwargs):
     """
@@ -59,7 +62,7 @@ def print_board(n, board_dict, message="", ansi=False, **kwargs):
     ansi -- True if you want to use ANSI control codes to enrich the output.
         Compatible with terminals supporting ANSI control codes. Default
         False.
-    
+
     Any other keyword arguments are passed through to the print function.
 
     Example:
@@ -82,9 +85,9 @@ def print_board(n, board_dict, message="", ansi=False, **kwargs):
         #     .-'-._.-'-._.-'-._.-'-._.-'-._.-'
         #    |     |  r  |  b  |     |     |
         #  .-'-._.-'-._.-'-._.-'-._.-'-._.-'
-        # |     |     |     |     |hello| 
+        # |     |     |     |     |hello|
         # '-._.-'-._.-'-._.-'-._.-'-._.-'
-        
+
     """
 
     stitch_pattern = ".-'-._"
@@ -110,8 +113,7 @@ def print_board(n, board_dict, message="", ansi=False, **kwargs):
     # Note that n - i - 1 is equivalent to r in axial coordinates
     for i in range(n):
         x_padding = (n - i - 1) * int(h_spacing / 2)
-        stitch_length = (n * h_spacing) - 1 + \
-            (int(h_spacing / 2) + 1 if i > 0 else 0)
+        stitch_length = (n * h_spacing) - 1 + (int(h_spacing / 2) + 1 if i > 0 else 0)
         mid_stitching = stitching(0, stitch_length)
 
         # Handle coloured borders for ansi outputs
@@ -119,10 +121,11 @@ def print_board(n, board_dict, message="", ansi=False, **kwargs):
         if i == 0:
             mid_stitching = apply_ansi_s(mid_stitching, color="r")
         else:
-            mid_stitching = \
-                apply_ansi_s(mid_stitching[:edge_col_len], color="b") + \
-                mid_stitching[edge_col_len:-edge_col_len] + \
-                apply_ansi_s(mid_stitching[-edge_col_len:], color="b")
+            mid_stitching = (
+                apply_ansi_s(mid_stitching[:edge_col_len], color="b")
+                + mid_stitching[edge_col_len:-edge_col_len]
+                + apply_ansi_s(mid_stitching[-edge_col_len:], color="b")
+            )
 
         output += " " * (x_padding + 1) + mid_stitching + "\n"
         output += " " * x_padding + apply_ansi_s(v_divider, color="b")
@@ -138,7 +141,7 @@ def print_board(n, board_dict, message="", ansi=False, **kwargs):
             output += contents + (v_divider if j < n - 1 else "")
         output += apply_ansi_s(v_divider, color="b")
         output += "\n"
-    
+
     # Final/lower stitching (note use of offset here)
     stitch_length = (n * h_spacing) + int(h_spacing / 2)
     lower_stitching = stitching(int(h_spacing / 2) - 1, stitch_length)
