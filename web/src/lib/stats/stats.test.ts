@@ -1,7 +1,7 @@
 /**
  * Reference values were computed with scipy 1.17.1 / statsmodels (uv, Python
  * 3.12) and cross-checked with R 4.x (prop.test(correct = FALSE),
- * wilcox.test, quantile(type = 7)). See "Verifying the statistics" in the
+ * wilcox.test, quantile(type = 7), binom.test). See "Verifying the statistics" in the
  * README.
  */
 import { describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import { type PairOutcome, eloExpected, fitBradleyTerry, toElo } from "./bradley
 import { geometricMean, mean, median, quantile, rankWithTies, sd, variance } from "./descriptive";
 import { formatP, formatPct, formatPctInterval, formatSigned } from "./format";
 import { erf, normalCdf, normalQuantile, normalSf, zCritical } from "./normal";
+import { binomialCdf, mcnemarExact } from "./mcnemar";
 import { cohensH, newcombeDifference, wilson } from "./proportion";
 import { wilcoxonSignedRank } from "./wilcoxon";
 
@@ -256,5 +257,38 @@ describe("formatting", () => {
     expect(formatSigned(3.21)).toBe("+3.2");
     expect(formatP(0.0004)).toBe("< 0.001");
     expect(formatP(0.0421)).toBe("0.042");
+  });
+});
+
+describe("exact McNemar test", () => {
+  // scipy.stats.binomtest(k, n, 0.5).pvalue, statsmodels mcnemar(exact=True),
+  // R binom.test(k, n): all agree on these.
+  it.each([
+    [1, 106, 1.3312027775604574e-30],
+    [3, 7, 0.34375],
+    [0, 5, 0.0625],
+    [5, 5, 1],
+    [7, 13, 0.26317596435546875],
+    [12, 28, 0.01658900337497471],
+  ])("b = %i, c = %i matches scipy and R", (b, c, p) => {
+    const r = mcnemarExact(b, c);
+    expect(r.pValue / p).toBeCloseTo(1, 12);
+    expect(r.discordant).toBe(b + c);
+    expect(r.statistic).toBe(Math.min(b, c));
+    expect(mcnemarExact(c, b).pValue).toBe(r.pValue); // symmetric
+  });
+
+  it("handles no discordant pairs and rejects bad input", () => {
+    expect(mcnemarExact(0, 0).pValue).toBe(1);
+    expect(() => mcnemarExact(-1, 2)).toThrow(RangeError);
+    expect(() => mcnemarExact(1.5, 2)).toThrow(RangeError);
+  });
+
+  it("binomial CDF matches scipy.stats.binom.cdf", () => {
+    expect(binomialCdf(1, 107)).toBeCloseTo(6.656013887802287e-31, 40);
+    expect(binomialCdf(4, 15, 0.3)).toBeCloseTo(0.5154910592268434, 13);
+    expect(binomialCdf(3, 10)).toBeCloseTo(0.171875, 14);
+    expect(binomialCdf(-1, 10)).toBe(0);
+    expect(binomialCdf(10, 10)).toBe(1);
   });
 });

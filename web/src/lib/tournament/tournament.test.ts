@@ -6,7 +6,7 @@ import { runAgent } from "@/lib/agent/run-agent";
 import { place } from "@/lib/cachex/types";
 import { csvCell, toCsv } from "@/lib/csv";
 import { AGENT_IDS, AGENTS, tournamentMove } from "./agents";
-import { gamesCsv, summariseTournament, summaryCsv } from "./analyse";
+import { eloDifference, gamesCsv, summariseTournament, summaryCsv } from "./analyse";
 import { type GameRecord, playTournamentGame } from "./play";
 import { buildSchedule, pairKey } from "./schedule";
 import { createRng } from "@/lib/rng";
@@ -217,6 +217,25 @@ describe("tournament summary", () => {
       expect(s.elo.lower).toBeLessThanOrEqual(s.elo.estimate + 1e-9);
       expect(s.elo.upper).toBeGreaterThanOrEqual(s.elo.estimate - 1e-9);
     }
+  });
+
+  it("compares agents by Elo differences from the same bootstrap refits", () => {
+    expect(summary.eloDifferences).toHaveLength(3); // every pair once
+    const elo = (id: string) => summary.standings.find((s) => s.id === id)!.elo.estimate;
+    const d = eloDifference(summary, "minimax-dynamic", "greedy")!;
+    expect(d.estimate).toBeCloseTo(elo("minimax-dynamic") - elo("greedy"), 9);
+    expect(d.lower).toBeLessThanOrEqual(d.estimate + 1e-9);
+    expect(d.upper).toBeGreaterThanOrEqual(d.estimate - 1e-9);
+    const flipped = eloDifference(summary, "greedy", "minimax-dynamic")!;
+    expect(flipped).toMatchObject({ a: "greedy", b: "minimax-dynamic" });
+    expect(flipped.estimate).toBeCloseTo(-d.estimate, 12);
+    expect(flipped.lower).toBeCloseTo(-d.upper, 12);
+    // Against the anchor, the difference is just the anchored Elo and its interval.
+    const vsRandom = eloDifference(summary, "greedy", "random")!;
+    const greedy = summary.standings.find((s) => s.id === "greedy")!.elo;
+    expect(vsRandom.lower).toBeCloseTo(greedy.lower, 9);
+    expect(vsRandom.upper).toBeCloseTo(greedy.upper, 9);
+    expect(summaryCsv(summary)).toContain("elo_difference,minimax-dynamic,greedy");
   });
 
   it("reports pairings and the colour effect", () => {

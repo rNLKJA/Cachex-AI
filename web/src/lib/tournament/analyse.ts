@@ -3,6 +3,11 @@
  * win rates with Wilson intervals, Bradley-Terry strengths on the Elo scale
  * with stratified bootstrap intervals, the first-move (colour) effect and
  * mean move times with bootstrap intervals.
+ *
+ * Two agents' strengths are compared through their Elo difference, with an
+ * interval taken from the same bootstrap replicates: the two estimates come
+ * from one fit and are correlated, so whether their separate intervals
+ * overlap is not the right test.
  */
 import { type CsvValue, toCsv } from "@/lib/csv";
 import { type BootstrapCI, bootstrapMean, stratifiedBootstrapVector } from "@/lib/stats/bootstrap";
@@ -53,11 +58,19 @@ export interface PairStanding {
   aAsBlue: { games: number; wins: number };
 }
 
+export interface EloDifference extends Interval {
+  /** Strength of `a` minus strength of `b`, Elo points (independent of the anchor). */
+  a: AgentId;
+  b: AgentId;
+}
+
 export interface TournamentSummary {
   games: number;
   sizes: number[];
   agents: AgentId[];
   standings: AgentStanding[];
+  /** Every pair of agents, in canonical order (a listed before b). */
+  eloDifferences: EloDifference[];
   pairs: PairStanding[];
   colour: {
     games: number;
@@ -117,15 +130,32 @@ export function summariseTournament(
     strataMap.set(key, list);
   }
   const strata = [...strataMap.values()];
-  const eloOf = (s: readonly (readonly GameRecord[])[]) =>
-    toElo(
+  const pairIndex: [number, number][] = [];
+  for (let i = 0; i < agents.length; i++) {
+    for (let j = i + 1; j < agents.length; j++) pairIndex.push([i, j]);
+  }
+  // One vector per replicate: every agent's Elo, then every pairwise difference.
+  const eloOf = (s: readonly (readonly GameRecord[])[]) => {
+    const elo = toElo(
       fitBradleyTerry(agents.length, outcomesFor(s.flat(), index), { prior }).theta,
       anchorIndex,
     );
+    return [...elo, ...pairIndex.map(([i, j]) => elo[i] - elo[j])];
+  };
   const bt =
     agents.length >= 2 && records.length > 0
       ? stratifiedBootstrapVector(strata, eloOf, { reps, seed })
       : null;
+  const eloDifferences: EloDifference[] = pairIndex.map(([i, j], c) => {
+    const k = agents.length + c;
+    return {
+      a: agents[i],
+      b: agents[j],
+      estimate: bt ? bt.estimate[k] : NaN,
+      lower: bt ? bt.lower[k] : NaN,
+      upper: bt ? bt.upper[k] : NaN,
+    };
+  });
 
   const standings: AgentStanding[] = agents.map((id, k) => {
     const mine = records.filter((g) => g.red.agent === id || g.blue.agent === id);
@@ -212,6 +242,7 @@ export function summariseTournament(
     sizes: [...new Set(records.map((g) => g.n))].sort((a, b) => a - b),
     agents,
     standings,
+    eloDifferences,
     pairs,
     colour: {
       games: records.length,
@@ -224,6 +255,19 @@ export function summariseTournament(
     anchor,
     bootstrap: { reps, seed, prior },
   };
+}
+
+/** Elo of `a` minus Elo of `b`, with its bootstrap interval, in either order. */
+export function eloDifference(
+  summary: TournamentSummary,
+  a: AgentId,
+  b: AgentId,
+): EloDifference | null {
+  const d = summary.eloDifferences.find(
+    (x) => (x.a === a && x.b === b) || (x.a === b && x.b === a),
+  );
+  if (!d) return null;
+  return d.a === a ? d : { a, b, estimate: -d.estimate, lower: -d.upper, upper: -d.lower };
 }
 
 /** One row per game, for CSV export. */
@@ -290,6 +334,25 @@ export function summaryCsv(summary: TournamentSummary): string {
       elo: null,
       elo_lo95: null,
       elo_hi95: null,
+      illegal_moves: null,
+      mean_move_ms: null,
+    });
+  }
+  for (const d of summary.eloDifferences) {
+    rows.push({
+      table: "elo_difference",
+      agent: d.a,
+      opponent: d.b,
+      games: null,
+      wins: null,
+      losses: null,
+      draws: null,
+      win_rate: null,
+      win_rate_lo95: null,
+      win_rate_hi95: null,
+      elo: r(d.estimate, 1),
+      elo_lo95: r(d.lower, 1),
+      elo_hi95: r(d.upper, 1),
       illegal_moves: null,
       mean_move_ms: null,
     });

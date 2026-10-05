@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { summarisePairedStudy } from "@/lib/analysis/astar-paired";
 import { loadAstarStudy } from "@/lib/data/load";
 import { ASTAR_STUDY_CONFIG } from "@/lib/data/reference-config";
-import { formatPct, formatSigned } from "@/lib/stats/format";
+import { formatNumber, formatP, formatPct } from "@/lib/stats/format";
 
 export const metadata: Metadata = {
   title: "A* Lab",
@@ -23,6 +23,15 @@ export default function AstarPage() {
   const e = summary.expansions;
   const o = summary.optimality;
   const cfg = ASTAR_STUDY_CONFIG;
+  // Phrase the paired mean difference as "fewer"/"more" rather than a negative count.
+  const fewer = e.meanDiff.estimate < 0;
+  const size = (x: number) => formatNumber(Math.abs(x), 1);
+  const [near, far] = fewer
+    ? [e.meanDiff.upper, e.meanDiff.lower]
+    : [e.meanDiff.lower, e.meanDiff.upper];
+  const pp = (x: number) => formatNumber(Math.abs(x) * 100, 1);
+  const d = o.difference;
+  const [dNear, dFar] = d.estimate < 0 ? [d.upper, d.lower] : [d.lower, d.upper];
   return (
     <div className="table-felt">
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 sm:px-6 lg:py-10">
@@ -45,16 +54,18 @@ export default function AstarPage() {
           <ul className="mb-6 grid gap-3 md:grid-cols-3">
             <Finding>
               <strong>The report&apos;s direction holds, and is now measured.</strong> Manhattan
-              expanded {formatSigned(e.meanDiff.estimate)} nodes per board on average (95% CI{" "}
-              {formatSigned(e.meanDiff.lower)} to {formatSigned(e.meanDiff.upper)}); fewer on{" "}
-              {e.manhattanFewer} boards, more on {e.euclideanFewer}.
+              expanded {size(e.meanDiff.estimate)} {fewer ? "fewer" : "more"} nodes per board on
+              average (paired 95% CI {size(near)} to {size(far)} {fewer ? "fewer" : "more"}); fewer
+              on {e.manhattanFewer} boards, more on {e.euclideanFewer}.
             </Finding>
             <Finding>
               <strong>But it finds a shortest path less often.</strong> Manhattan returned an
-              optimal path on {formatPct(o.manhattan.p)} of solvable boards (95% CI{" "}
-              {formatPct(o.manhattan.lower)} to {formatPct(o.manhattan.upper)}), Euclidean on{" "}
-              {formatPct(o.euclidean.p)} ({formatPct(o.euclidean.lower)} to{" "}
-              {formatPct(o.euclidean.upper)}).
+              optimal path on {formatPct(o.manhattan.p)} of solvable boards, Euclidean on{" "}
+              {formatPct(o.euclidean.p)}: {pp(o.difference.estimate)} points{" "}
+              {o.difference.estimate < 0 ? "fewer" : "more"} for Manhattan on the same boards
+              (paired 95% CI {pp(dNear)} to {pp(dFar)}). Where only one heuristic was optimal, it
+              was Manhattan on {o.mcnemar.b} boards and Euclidean on {o.mcnemar.c} (exact McNemar p{" "}
+              {formatP(o.mcnemar.pValue)}).
             </Finding>
             <Finding>
               <strong>Why: neither heuristic is admissible here.</strong> On this hex grid a step

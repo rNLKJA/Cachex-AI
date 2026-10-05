@@ -20,6 +20,7 @@ import type { Coord } from "@/lib/cachex/types";
 import { createRng } from "@/lib/rng";
 import { type BootstrapCI, pairedMeanDifference } from "@/lib/stats/bootstrap";
 import { median } from "@/lib/stats/descriptive";
+import { type McNemarResult, mcnemarExact } from "@/lib/stats/mcnemar";
 import { type ProportionCI, wilson } from "@/lib/stats/proportion";
 import { type WilcoxonResult, wilcoxonSignedRank } from "@/lib/stats/wilcoxon";
 
@@ -142,6 +143,13 @@ export interface PairedStudySummary {
     euclidean: ProportionCI;
     /** Boards where both heuristics returned paths of the same length. */
     agreement: ProportionCI;
+    /**
+     * Paired comparison on the same boards: Manhattan's optimal-path rate minus
+     * Euclidean's, with a paired bootstrap CI that resamples boards.
+     */
+    difference: BootstrapCI;
+    /** Exact McNemar test on the discordant boards (b: Manhattan only, c: Euclidean only). */
+    mcnemar: McNemarResult;
     /** Mean extra cells over the shortest path, across boards with a path. */
     manhattanExcess: number;
     euclideanExcess: number;
@@ -182,8 +190,14 @@ export function summarisePairedStudy(
   const paired = pairedMeanDifference(m, e, { reps, seed });
   const diffs = m.map((x, i) => x - e[i]);
   const withPath = rows.filter((r) => r.optimalCells !== null);
+  const isOptimal = (key: "manhattan" | "euclidean") =>
+    withPath.map((r): number => (r[key].cells === r.optimalCells ? 1 : 0));
+  const mOpt = isOptimal("manhattan");
+  const eOpt = isOptimal("euclidean");
   const optimal = (key: "manhattan" | "euclidean") =>
-    withPath.filter((r) => r[key].cells === r.optimalCells).length;
+    (key === "manhattan" ? mOpt : eOpt).reduce((s, x) => s + x, 0);
+  // Its own seed, so the expansion interval above is unchanged by this one.
+  const optimalDiff = pairedMeanDifference(mOpt, eOpt, { reps, seed: seed + 1 });
   const excess = (key: "manhattan" | "euclidean") =>
     withPath.length
       ? withPath.reduce((s, r) => s + (r[key].cells - r.optimalCells!), 0) / withPath.length
@@ -214,6 +228,11 @@ export function summarisePairedStudy(
       agreement: wilson(
         withPath.filter((r) => r.manhattan.cells === r.euclidean.cells).length,
         withPath.length,
+      ),
+      difference: optimalDiff.meanDiff,
+      mcnemar: mcnemarExact(
+        mOpt.filter((x, i) => x === 1 && eOpt[i] === 0).length,
+        mOpt.filter((x, i) => x === 0 && eOpt[i] === 1).length,
       ),
       manhattanExcess: excess("manhattan"),
       euclideanExcess: excess("euclidean"),

@@ -26,7 +26,7 @@ describe("rendered docs", () => {
 
   it("lists decision records in order with ids and titles", () => {
     const list = listDecisions();
-    expect(list.map((d) => d.id)).toEqual(["DR-001", "DR-002", "DR-003"]);
+    expect(list.map((d) => d.id)).toEqual(["DR-001", "DR-002", "DR-003", "DR-004"]);
     for (const d of list) {
       expect(d.title.length).toBeGreaterThan(5);
       expect(d.slug.startsWith(d.id)).toBe(true);

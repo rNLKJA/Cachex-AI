@@ -4,6 +4,8 @@ import { astar } from "@/lib/astar/astar";
 import { PRESETS } from "@/lib/astar/presets";
 import { parsePartAInput } from "@/lib/astar/input";
 import { runHeuristicBenchmark } from "@/lib/astar/random-board";
+import { loadAstarStudy } from "@/lib/data/load";
+import { ASTAR_STUDY_CONFIG } from "@/lib/data/reference-config";
 import { measurePruning, samplePositions, summarisePruning } from "./alpha-beta";
 import {
   bfsPathCells,
@@ -100,7 +102,23 @@ describe("paired heuristic study", () => {
     const o = summary.optimality;
     expect(o.manhattan.n).toBe(summary.boardsWithPath);
     expect(o.manhattanExcess).toBeGreaterThanOrEqual(0);
+    // The paired difference equals the difference of the two rates, and
+    // McNemar's discordant counts reconcile with the marginal counts.
+    expect(o.difference.estimate).toBeCloseTo(o.manhattan.p - o.euclidean.p, 12);
+    expect(o.difference.lower).toBeLessThanOrEqual(o.difference.estimate);
+    expect(o.difference.upper).toBeGreaterThanOrEqual(o.difference.estimate);
+    expect(o.mcnemar.b - o.mcnemar.c).toBe(o.manhattan.successes - o.euclidean.successes);
     expect(pairedStudyCsvRows(rows)).toHaveLength(60);
+  });
+
+  it("reports the reference study's paired optimality comparison", () => {
+    const ref = summarisePairedStudy(loadAstarStudy().rows, { seed: ASTAR_STUDY_CONFIG.seed });
+    const o = ref.optimality;
+    expect([o.manhattan.successes, o.euclidean.successes, o.manhattan.n]).toEqual([692, 797, 931]);
+    expect([o.mcnemar.b, o.mcnemar.c]).toEqual([1, 106]);
+    expect(o.mcnemar.pValue / 1.3312027775604574e-30).toBeCloseTo(1, 10); // scipy binomtest(1, 107)
+    expect(o.difference.estimate).toBeCloseTo(-105 / 931, 12);
+    expect(o.difference.upper).toBeLessThan(0);
   });
 });
 

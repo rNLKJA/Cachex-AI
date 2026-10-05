@@ -15,7 +15,7 @@ import { AGENT_IDS, AGENTS, type AgentId } from "@/lib/tournament/agents";
 import { gamesCsv, summariseTournament, summaryCsv } from "@/lib/tournament/analyse";
 import type { GameRecord } from "@/lib/tournament/play";
 import { buildSchedule } from "@/lib/tournament/schedule";
-import { Leaderboard, PairwiseTable, SummaryStats } from "./tournament-results";
+import { EloDifferenceTable, Leaderboard, PairwiseTable, SummaryStats } from "./tournament-results";
 
 const SIZES = [3, 4, 5, 6, 7];
 const ROUNDS = [1, 2, 5, 10, 20];
@@ -257,9 +257,10 @@ export function TournamentRunner() {
             <SummaryStats summary={summary} />
             <Leaderboard
               summary={summary}
-              caption="Your run: Bradley-Terry strengths (Elo scale, random = 0 when included) with bootstrap 95% intervals; Wilson intervals for win rates. Move times are from this browser."
+              caption={`Your run: Bradley-Terry strengths on the Elo scale (${summary.anchor ? "random fixed at 0" : "centred on the mean of the agents you picked, because random is not included"}) with bootstrap 95% intervals; Wilson intervals for win rates. Move times are from this browser.`}
             />
             <PairwiseTable summary={summary} />
+            <EloDifferenceTable summary={summary} />
           </>
         )}
       </div>

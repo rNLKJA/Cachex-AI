@@ -7,7 +7,7 @@ import { EstimateCI, IntervalAxis, IntervalBar, niceTicks } from "@/components/s
 import { ScrollTable } from "@/components/stats/scroll-table";
 import { AGENTS } from "@/lib/tournament/agents";
 import type { TournamentSummary } from "@/lib/tournament/analyse";
-import { formatNumber, formatPct } from "@/lib/stats/format";
+import { formatNumber, formatPct, formatSigned } from "@/lib/stats/format";
 
 const pctCI = (lo: number, hi: number) => `[${(lo * 100).toFixed(1)}, ${(hi * 100).toFixed(1)}]`;
 
@@ -37,7 +37,9 @@ export function Leaderboard({ summary, caption }: { summary: TournamentSummary; 
             />
           </th>
           <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap">
-            Elo vs random (95% CI)
+            {summary.anchor
+              ? `Elo vs ${AGENTS[summary.anchor].short.toLowerCase()} (95% CI)`
+              : "Elo vs field mean (95% CI)"}
           </th>
           <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap">
             Win rate (95% CI)
@@ -112,13 +114,20 @@ export function Leaderboard({ summary, caption }: { summary: TournamentSummary; 
 }
 
 export function PairwiseTable({ summary }: { summary: TournamentSummary }) {
+  const balanced = summary.pairs.every((p) => p.aAsRed.games === p.aAsBlue.games);
+  const k = summary.agents.length;
+  const missing = (k * (k - 1)) / 2 - summary.pairs.length;
   return (
     <ScrollTable
       className="min-w-[620px]"
       caption={
         <>
-          Head to head. Win rate of the first-named agent; the vertical line marks 50%. Each pairing
-          played equal games as Red and as Blue.
+          Head to head. Win rate of the first-named agent; the vertical line marks 50%.{" "}
+          {balanced
+            ? "Each pairing played equal games as Red and as Blue."
+            : "This run was stopped part-way, so some pairings played unequal games as Red and as Blue (see the last column); their win rates include the first-move effect."}
+          {missing > 0 &&
+            ` ${missing} pairing${missing === 1 ? " has" : "s have"} no games yet and ${missing === 1 ? "is" : "are"} not shown.`}
         </>
       }
     >
@@ -172,6 +181,79 @@ export function PairwiseTable({ summary }: { summary: TournamentSummary }) {
             </td>
             <td className="text-muted-foreground py-2 text-right font-mono text-xs whitespace-nowrap tabular-nums">
               {p.aAsRed.wins}/{p.aAsRed.games} · {p.aAsBlue.wins}/{p.aAsBlue.games}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </ScrollTable>
+  );
+}
+
+/**
+ * Pairwise strength differences, each with a percentile interval from the same
+ * bootstrap replicates as the leaderboard (so the correlation between the two
+ * strengths is accounted for).
+ */
+export function EloDifferenceTable({ summary }: { summary: TournamentSummary }) {
+  const diffs = summary.eloDifferences.filter((d) => Number.isFinite(d.estimate));
+  if (diffs.length === 0) return null;
+  const extent = Math.max(100, ...diffs.flatMap((d) => [Math.abs(d.lower), Math.abs(d.upper)]));
+  const max = Math.ceil((extent * 1.06) / 50) * 50;
+  return (
+    <ScrollTable
+      className="min-w-[520px]"
+      label="Elo differences between agents"
+      caption={
+        <>
+          Strength differences, first-named minus second, in Elo points. Each interval comes from
+          the same {summary.bootstrap.reps} bootstrap refits as the leaderboard, so it is the right
+          way to compare two agents (their separate intervals are correlated, so overlap is not a
+          test). An interval that excludes 0 is a detectable difference.
+        </>
+      }
+    >
+      <thead className="text-muted-foreground text-left text-xs">
+        <tr className="border-b">
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Difference
+          </th>
+          <th scope="col" className="w-[36%] py-2 pr-3 font-medium">
+            <span className="sr-only">Difference interval</span>
+            <IntervalAxis
+              min={-max}
+              max={max}
+              ticks={[-max, 0, max]}
+              format={(t) => (t > 0 ? `+${t}` : t < 0 ? `−${-t}` : "0")}
+            />
+          </th>
+          <th scope="col" className="py-2 font-medium whitespace-nowrap">
+            Elo difference (95% CI)
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {diffs.map((d) => (
+          <tr key={`${d.a}-${d.b}`} className="border-border/50 border-b last:border-0">
+            <th scope="row" className="py-2 pr-3 text-left font-normal whitespace-nowrap">
+              {AGENTS[d.a].short} <span className="text-muted-foreground">−</span>{" "}
+              {AGENTS[d.b].short}
+            </th>
+            <td className="py-2 pr-3">
+              <IntervalBar
+                estimate={d.estimate}
+                lower={d.lower}
+                upper={d.upper}
+                min={-max}
+                max={max}
+                reference={0}
+                label={`${AGENTS[d.a].short} minus ${AGENTS[d.b].short}: ${Math.round(d.estimate)} Elo, 95% CI ${Math.round(d.lower)} to ${Math.round(d.upper)}`}
+              />
+            </td>
+            <td className="py-2">
+              <EstimateCI
+                estimate={formatSigned(d.estimate, 0)}
+                interval={`[${formatSigned(d.lower, 0)}, ${formatSigned(d.upper, 0)}]`}
+              />
             </td>
           </tr>
         ))}

@@ -57,7 +57,10 @@ export function PairedStudySummaryView({ summary }: { summary: PairedStudySummar
         <ScrollTable
           className="min-w-[420px]"
           caption={
-            <>Compared with a breadth-first search on the same board. Wilson 95% intervals.</>
+            <>
+              Compared with a breadth-first search on the same board. Wilson 95% intervals for each
+              rate on its own.
+            </>
           }
         >
           <thead className="text-muted-foreground text-left text-xs">
@@ -109,10 +112,25 @@ export function PairedStudySummaryView({ summary }: { summary: PairedStudySummar
             ))}
           </tbody>
         </ScrollTable>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <Stat
+            label="Paired difference, Manhattan − Euclidean"
+            value={`${formatSigned(o.difference.estimate * 100, 1)} pp`}
+            hint={`95% paired bootstrap CI [${formatSigned(o.difference.lower * 100, 1)}, ${formatSigned(o.difference.upper * 100, 1)}] pp; resamples boards, ${o.difference.reps} reps, seed ${o.difference.seed}`}
+          />
+          <Stat
+            label="Exact McNemar test (two-sided)"
+            value={`p ${formatP(o.mcnemar.pValue)}`}
+            hint={`${o.mcnemar.discordant} discordant boards: optimal for Manhattan only on ${o.mcnemar.b}, Euclidean only on ${o.mcnemar.c}`}
+          />
+        </dl>
         <p className="text-muted-foreground text-xs">
-          Extra cells: mean path length beyond the shortest, over boards with a path (largest seen:{" "}
-          {o.maxExcess}). Neither heuristic is admissible on this grid: both overestimate the true
-          distance for {formatPct(summary.overestimation.manhattan)} of start/goal pairs on an empty{" "}
+          The two rates come from the same boards, so the paired difference and McNemar&apos;s test
+          (which uses only the boards where the heuristics disagree) are the comparison; the
+          separate intervals above describe each heuristic on its own. Extra cells: mean path length
+          beyond the shortest, over boards with a path (largest seen: {o.maxExcess}). Neither
+          heuristic is admissible on this grid: both overestimate the true distance for{" "}
+          {formatPct(summary.overestimation.manhattan)} of start/goal pairs on an empty{" "}
           {summary.overestimation.dimension} × {summary.overestimation.dimension} board.
         </p>
       </div>

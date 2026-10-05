@@ -16,7 +16,7 @@ import { ALPHA_BETA_CONFIG, REFERENCE_TOURNAMENT_CONFIG } from "@/lib/data/refer
 import { formatPct, formatSigned } from "@/lib/stats/format";
 import { wilson } from "@/lib/stats/proportion";
 import { AGENTS } from "@/lib/tournament/agents";
-import { summariseTournament } from "@/lib/tournament/analyse";
+import { eloDifference, summariseTournament } from "@/lib/tournament/analyse";
 import { compareImplementations } from "@/lib/tournament/crosscheck";
 
 export const metadata: Metadata = {
@@ -66,6 +66,10 @@ export default function TournamentPage() {
   const standing = (id: string) => all.standings.find((s) => s.id === id)!;
   const dyn = standing("minimax-dynamic");
   const d3 = standing("minimax-d3");
+  // Strength comparisons use differences from the same bootstrap refits, not overlap.
+  const dynMinusGreedy = eloDifference(all, "minimax-dynamic", "greedy")!;
+  const d3MinusDyn = eloDifference(all, "minimax-d3", "minimax-dynamic")!;
+  const elo = (x: number) => formatSigned(x, 0);
   const deepSearches = ref.games.reduce(
     (acc, g) => {
       for (const s of [g.red, g.blue]) {
@@ -252,11 +256,16 @@ export default function TournamentPage() {
               deepen once fewer than 15% of cells are empty, and most games end before that.
             </Finding>
             <Finding>
-              <strong>The original is indistinguishable from greedy one-ply.</strong> Head to head
-              it won {dynVsGreedy.aWins} and lost {dynVsGreedy.bWins} (
+              <strong>No detectable difference from greedy one-ply.</strong> Head to head the
+              original won {dynVsGreedy.aWins} and lost {dynVsGreedy.bWins} (
               {formatPct(dynVsGreedy.aWinRate.p)}, 95% CI {formatPct(dynVsGreedy.aWinRate.lower)} to{" "}
-              {formatPct(dynVsGreedy.aWinRate.upper)}), and their Elo intervals overlap almost
-              entirely. The opening book and the late deepening add no detectable strength here.
+              {formatPct(dynVsGreedy.aWinRate.upper)}), and its strength minus greedy&apos;s is{" "}
+              {elo(dynMinusGreedy.estimate)} Elo (95% CI {elo(dynMinusGreedy.lower)} to{" "}
+              {elo(dynMinusGreedy.upper)}). The interval still allows the original to win up to
+              about {Math.round((dynVsGreedy.aWinRate.upper - 0.5) * 100)} points more or{" "}
+              {Math.round((0.5 - dynVsGreedy.aWinRate.lower) * 100)} points less than half its games
+              against greedy, so only larger differences are ruled out; the opening book and the
+              late deepening add no detectable strength.
             </Finding>
             <Finding>
               <strong>Against random it reproduces the original benchmark.</strong>{" "}
@@ -265,9 +274,10 @@ export default function TournamentPage() {
               on boards 4 to 6, consistent with the 90% the Python run recorded on boards 4 to 7.
             </Finding>
             <Finding>
-              <strong>Strength costs time.</strong> Depth 3 is{" "}
-              {Math.round(d3.elo.estimate - dyn.elo.estimate)} Elo above the original but spends
-              about {Math.round(d3.moveMs.estimate / dyn.moveMs.estimate)}× as long per move, partly
+              <strong>Strength costs time.</strong> Depth 3 is {Math.round(d3MinusDyn.estimate)} Elo
+              above the original (95% CI {Math.round(d3MinusDyn.lower)} to{" "}
+              {Math.round(d3MinusDyn.upper)}) but spends about{" "}
+              {Math.round(d3.moveMs.estimate / dyn.moveMs.estimate)}× as long per move, partly
               because of the pruning bug described{" "}
               <a href="#alpha-beta" className="underline underline-offset-4">
                 below
@@ -444,7 +454,7 @@ export default function TournamentPage() {
             <summary className="cursor-pointer text-sm font-medium">
               Canonical (r, q) move order
             </summary>
-            <div className="relative mt-3 max-w-full overflow-x-auto">
+            <div className="mt-3">
               <AlphaBetaTable
                 groups={canonical}
                 caption="Same positions, moves searched in sorted (r, q) order instead of shuffled."
