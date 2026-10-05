@@ -189,7 +189,8 @@ export function CommentatorPanel({
             </div>
           )}
 
-          <details className="text-xs">
+          {/* Open when a check failed, so the reviewer sees what is wrong before deciding. */}
+          <details className="text-xs" open={!state.grounding.passed}>
             <summary
               className={cn(
                 "flex cursor-pointer items-center gap-1.5 font-medium",
