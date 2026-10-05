@@ -10,7 +10,7 @@
 [![University of Melbourne](https://img.shields.io/badge/UniMelb-COMP30024-094183)](https://handbook.unimelb.edu.au/2022/subjects/comp30024)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Live demo:** _coming soon_ (https://cachex-ai.vercel.app)
+**Live demo: [cachex-ai.vercel.app](https://cachex-ai.vercel.app)**
 
 </div>
 

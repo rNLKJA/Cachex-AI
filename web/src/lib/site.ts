@@ -3,7 +3,7 @@ export const SITE = {
   description:
     "Play Cachex against the minimax agent we built for COMP30024 Artificial Intelligence at the University of Melbourne, watch agents battle, and step through our A* search.",
   repo: "https://github.com/rNLKJA/Cachex-AI",
-  /** Placeholder until the Vercel deployment exists. */
+  /** Production URL on Vercel (override with NEXT_PUBLIC_SITE_URL). */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://cachex-ai.vercel.app",
   subject: { code: "COMP30024", name: "Artificial Intelligence", term: "Semester 1, 2022" },
   team: [
