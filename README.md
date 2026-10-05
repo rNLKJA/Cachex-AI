@@ -16,6 +16,92 @@
 
 ---
 
+## Showcase
+
+<p align="center">
+  <img src="docs/showcase/play-the-agent.gif" width="960" alt="Playing the minimax agent on a 5 × 5 board: the opening steal, a capture, a recapture and the agent's explanation of its move, with a numbered caption for each step">
+</p>
+
+**[Take the guided tour →](https://cachex-ai.vercel.app/tour)** Three captioned walkthrough videos and
+every screenshot below, recorded from a production build of the site by a reproducible Playwright script
+([`web/e2e/showcase.spec.ts`](web/e2e/showcase.spec.ts), run with `pnpm showcase`) that also checks
+each step, so the same seeds give the same moves and numbers. No real API key appears anywhere:
+the AI steps use a placeholder key and a mocked reply, labelled on screen.
+
+### Key features
+
+| | |
+| --- | --- |
+| <img src="docs/showcase/01-landing-light.png" alt="Landing page in light mode"><br>**Landing page.** The game, the coursework and the key results, each with its interval. | <img src="docs/showcase/02-landing-dark.png" alt="Landing page in dark mode"><br>**Dark mode.** The same page in dark mode. |
+| <img src="docs/showcase/03-play.png" alt="Play page after a capture and a recapture, with the Why that move panel"><br>**Play the agent.** After a capture and a recapture on 5 × 5, with the agent's search for its capture. | <img src="docs/showcase/04-spectate.png" alt="AI vs AI game with the evaluation trend chart"><br>**AI vs AI.** A seeded agent-vs-agent game with the evaluation trend. |
+| <img src="docs/showcase/05-astar-lab.png" alt="A* Lab showing the 8-cell path for the original sample input"><br>**A\* Lab.** The original sample input: an 8-cell path that matches the recorded output. | <img src="docs/showcase/06-astar-paired-study.png" alt="Paired heuristic study with bootstrap interval, Wilcoxon test and McNemar test"><br>**Paired heuristic study.** 980 paired boards: bootstrap CI, Wilcoxon test, BFS optimality and McNemar. |
+| <img src="docs/showcase/07-tournament.png" alt="Tournament results with Wilson and bootstrap intervals"><br>**Tournament harness.** A seeded 24-game round robin: Wilson and bootstrap 95% intervals. | <img src="docs/showcase/08-ai-settings.png" alt="AI settings dialog for bringing your own key"><br>**Bring your own key.** AI settings: Anthropic by default, the key stays in this browser. |
+| <img src="docs/showcase/09-llm-arena.png" alt="LLM Arena evaluation setup and baselines"><br>**LLM Arena.** The LLM-as-a-player harness and its baselines on the same seeds (no key needed). | <img src="docs/showcase/10-methods.png" alt="Methods page with data provenance"><br>**Methods.** Provenance, evaluation design, limitations, decision records and AI use. |
+| <img src="docs/showcase/11-mobile-landing.png" width="260" alt="Landing page on a phone"><br>**Mobile: landing.** The landing page at 390 px. | <img src="docs/showcase/12-mobile-play.png" width="260" alt="Play page on a phone"><br>**Mobile: play.** Playing the agent on a phone, after the recapture. |
+| <img src="docs/showcase/13-mobile-astar.png" width="260" alt="A* Lab on a phone"><br>**Mobile: A\* Lab.** The A\* Lab with the sample input's path. | **[More on /tour →](https://cachex-ai.vercel.app/tour)** Every screenshot in a lightbox, and the three videos with captions and transcripts. |
+
+### Workflow walkthrough
+
+The numbered steps are the captions shown on screen. The videos on
+[/tour](https://cachex-ai.vercel.app/tour) play in real time with captions; the GIFs here are
+shortened (waits on the app and scrolls are cut, and they play at 1.25× speed).
+
+#### 1. Play the agent (`/play`)
+
+Setup: 5 × 5, you play Red against the minimax agent, page seed 4399. (The GIF at the top of this section.)
+
+1. Open Play: a 5 × 5 board against the minimax agent (seed 4399), coordinates on
+2. Red opens on the strong cell (1, 1)
+3. Blue steals: Red's opening tile is mirrored across the diagonal and becomes Blue's
+4. Red plays (0, 1); the agent answers at (4, 1)
+5. Red plays (1, 0), leaving two red tiles inside a diamond
+6. Capture: Blue closes the diamond at (0, 0) and removes both red tiles
+7. Red retakes (0, 1); the agent plays (1, 4)
+8. Recapture: Red plays (1, 0) and removes Blue's (0, 0) and (1, 1)
+9. Why that move? Pick the capture in the move log: search depth, candidate scores, features
+
+#### 2. A\* Lab (`/astar`)
+
+Setup: preset “Sample input 1” (`code/sample_input.json`); reference study seed 2022.
+
+1. Open the A* Lab: the Part A search, ported line by line from Python
+2. Load the original sample input (code/sample_input.json)
+3. Manhattan, as in the recorded output: animate the expansions
+4. An 8-cell path that matches sample_output.txt from the original repo
+5. Switch to Euclidean and animate the same board
+6. Same board, both heuristics: path cost, nodes expanded, queue pushes
+7. Paired study on 980 boards: paired bootstrap CI and Wilcoxon test on expansions
+8. Optimality against breadth-first search: paired difference and exact McNemar test
+
+<details>
+<summary>Watch the A* Lab walkthrough (GIF, 6.7 MB)</summary>
+<p align="center"><img src="docs/showcase/astar-lab.gif" width="960" alt="A* Lab walkthrough: loading the sample input, animating Manhattan and Euclidean, and the paired study"></p>
+</details>
+
+#### 3. Tournament and LLM evaluation (`/tournament`, `/llm-arena`, `/ai-log`)
+
+Setup: round robin of 4 agents on 4 × 4, 2 colour-swapped pairs, seed 4399; LLM Arena 2 games on
+4 × 4, seed 2026. Steps 6 to 10 are a **mocked AI response for illustration**: the key is a
+placeholder, every request to the provider is intercepted in the browser and answered by a mock
+that plays the first legal cell, so the LLM row shows the mock, not a real model's results.
+
+1. Open the tournament harness: a seeded, colour-swapped round robin
+2. Keep 4 agents and seed 4399; 4 × 4 only, 2 colour-swapped pairs: 24 games
+3. Run all 24 games in parallel Web Workers
+4. Win rates with Wilson 95% CIs, Bradley-Terry strengths with bootstrap CIs
+5. AI settings: bring your own key, kept in this browser and sent only to the provider
+6. For this demo: a placeholder key and the model id “mock-for-illustration”, no real key
+7. LLM Arena: 2 games on 4 × 4 against the minimax agent, on the baselines' seeds
+8. Every reply is checked against the legal moves and labelled AI-generated
+9. Side by side with random, greedy and scripted baselines, Wilson 95% CIs
+10. Every call is in the AI audit log, with JSON and CSV export
+11. Forget key: the placeholder is removed from this browser
+
+<details>
+<summary>Watch the tournament and LLM evaluation walkthrough (GIF, 7.4 MB)</summary>
+<p align="center"><img src="docs/showcase/tournament-llm-eval.gif" width="960" alt="Tournament and LLM evaluation walkthrough: a seeded round robin with intervals, the bring-your-own-key dialog and a mocked LLM Arena run"></p>
+</details>
+
 ## Overview
 
 Cachex is a two-player connection game on an _n_ × _n_ rhombic hex board, based on Hex.
@@ -48,6 +134,7 @@ ported to TypeScript line by line and is verified against the original code.
 | `/llm-arena` | **LLM as a player** (bring your own key): a language model plays short games against the minimax agent via structured JSON moves validated against the legal moves; win rate with Wilson interval, the share of turns whose first answer was rejected (illegal move vs no usable move, scored the same way for both providers; interval from a bootstrap over games), forfeits, latency and tokens, side by side with random, greedy and a scripted first-legal-cell baseline on the same seeds (only the games the model finished, if a run stops early), each compared with the model game by game (exact McNemar) |
 | `/methods` | Data provenance, method, evaluation design, assumptions, limitations, "what I'd change", the decision records (`/methods/decisions/…`), the agent card (`/methods/agent-card`) and the AI use statement |
 | `/ai-log` | The AI audit log: every AI call made from this browser, with exact input, output, latency, tokens and your review decision; JSON and CSV export |
+| `/tour` | The guided tour: three captioned walkthrough videos (play the agent, the A\* Lab, the tournament and LLM evaluation) with step lists and transcripts, and every screenshot in a lightbox |
 
 Agents, the heuristic study and the tournament run in **Web Workers**, so the board stays responsive. Everything works without an API key; the AI features are optional.
 
@@ -152,16 +239,19 @@ not a claim of compliance with any of them.
 Cachex-AI/
 ├── coursework/                 # original submission, unchanged (see coursework/README.md)
 ├── docs/                       # agent card, AI use statement, decision records (rendered on /methods)
+│   └── showcase/               #   README screenshots and GIFs (pnpm showcase)
 ├── scripts/                    # uv scripts that run the ORIGINAL Python
 │   ├── generate_parity_fixtures.py
 │   ├── benchmark_agent.py      #   144/160 vs random
 │   └── crosscheck_tournament.py#   tournament pairings feasible in Python
 ├── web/                        # the deployable Next.js app (Vercel root)
+│   ├── e2e/                    # Playwright guided tour: journeys as end-to-end tests, records the showcase
 │   ├── content/docs/           # synced copy of docs/ (pnpm sync-docs; a test checks they match)
-│   ├── scripts/                # generate-reference-studies.ts (tsx), sync-docs.mjs
+│   ├── public/showcase/        # /tour videos (MP4), captions (WebVTT), posters, screenshot copies
+│   ├── scripts/                # generate-reference-studies.ts (tsx), sync-docs.mjs, showcase*.mjs
 │   └── src/
-│       ├── app/                # / , /play, /spectate, /astar, /tournament, /llm-arena, /methods, /ai-log, CSV routes
-│       ├── components/         # ui/, layout/, board/, play/, astar/, tournament/, stats/, ai/, methods/
+│       ├── app/                # / , /play, /spectate, /astar, /tournament, /llm-arena, /methods, /ai-log, /tour, CSV routes
+│       ├── components/         # ui/, layout/, board/, play/, astar/, tournament/, stats/, ai/, methods/, tour/
 │       ├── hooks/              # match state, Web Worker clients and the tournament worker pool
 │       ├── lib/
 │       │   ├── cachex/         #   referee rules: board, captures, STEAL, win/draw
@@ -194,6 +284,21 @@ pnpm build && pnpm start
 
 pnpm gen:reference  # regenerate the reference studies (TypeScript port, a few minutes)
 pnpm sync-docs      # copy ../docs into web/content/docs after editing the docs
+```
+
+### Guided tour and showcase media
+
+`pnpm showcase` runs the guided tour in [`web/e2e/showcase.spec.ts`](web/e2e/showcase.spec.ts) with
+Playwright on the system Google Chrome (no browser is downloaded; the ffmpeg on `PATH` records the
+video). Each journey is an end-to-end test that asserts what it shows (the steal, both captures,
+the recorded A\* output, the seeded tournament, the mocked LLM run and the audit log), then
+[`web/scripts/showcase-media.mjs`](web/scripts/showcase-media.mjs) writes the screenshots and GIFs
+in `docs/showcase/` and the MP4s, captions and posters in `web/public/showcase/`.
+
+```bash
+pnpm showcase                                  # against production (BASE_URL defaults to it)
+BASE_URL=http://localhost:3000 pnpm showcase   # after pnpm build; the server is started for you
+pnpm showcase:test                             # quick end-to-end check: no pauses, no video
 ```
 
 ## How the data artefacts are generated
