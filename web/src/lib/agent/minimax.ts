@@ -17,6 +17,11 @@ export interface SearchContext {
    */
   order: MoveOrder;
   bias: BiasFn;
+  /**
+   * Alpha-beta cut-offs (the original always prunes). Turning this off gives
+   * plain minimax with the same move order, for the pruning-efficiency study.
+   */
+  prune: boolean;
   /** Number of nodes visited (for the UI). */
   nodes: number;
   /** Root-level (action, score) pairs, recorded when requested. */
@@ -26,9 +31,11 @@ export interface SearchContext {
 export const createContext = (
   order: MoveOrder = "canonical",
   bias: BiasFn = noBias,
+  prune = true,
 ): SearchContext => ({
   order,
   bias,
+  prune,
   nodes: 0,
 });
 
@@ -109,7 +116,7 @@ export function minimax(
         maxAction = action;
       }
       if (maxScore >= alpha) alpha = maxScore;
-      if (alpha >= beta) break;
+      if (ctx.prune && alpha >= beta) break;
     }
     return [maxScore, maxAction];
   }
@@ -126,7 +133,7 @@ export function minimax(
       minAction = action;
     }
     if (beta <= minScore) beta = minScore;
-    if (alpha >= beta) break;
+    if (ctx.prune && alpha >= beta) break;
   }
   return [minScore, minAction];
 }

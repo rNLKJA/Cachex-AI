@@ -1,16 +1,17 @@
 /**
- * Runs the Manhattan vs Euclidean heuristic study off the main thread.
+ * Runs the paired Manhattan vs Euclidean heuristic study off the main thread.
  */
-import { type BenchmarkRow, runHeuristicBenchmark } from "@/lib/astar/random-board";
+import { type PairedStudyRow, runPairedStudy } from "@/lib/analysis/astar-paired";
 
 export interface BenchmarkRequest {
   id: number;
   dimensions: number[];
+  boardsPerDimension: number;
   seed: number;
 }
 
 export type BenchmarkResponse =
-  | { id: number; ok: true; rows: BenchmarkRow[]; elapsedMs: number }
+  | { id: number; ok: true; rows: PairedStudyRow[]; elapsedMs: number }
   | { id: number; ok: false; error: string };
 
 const ctx = self as unknown as {
@@ -24,7 +25,7 @@ const ctx = self as unknown as {
 ctx.addEventListener("message", ({ data }) => {
   const started = performance.now();
   try {
-    const rows = runHeuristicBenchmark(data.dimensions, data.seed);
+    const rows = runPairedStudy(data);
     ctx.postMessage({ id: data.id, ok: true, rows, elapsedMs: performance.now() - started });
   } catch (err) {
     ctx.postMessage({
