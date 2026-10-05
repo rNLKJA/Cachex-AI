@@ -1,0 +1,5 @@
+.next
+node_modules
+pnpm-lock.yaml
+src/lib/__fixtures__
+src/components/ui
