@@ -29,7 +29,7 @@ export default function AgentCardPage() {
       <p className="text-muted-foreground text-xs">
         Source:{" "}
         <a
-          href={`${SITE.repo}/blob/main/docs/model-card.md`}
+          href={`${SITE.repo}/blob/${SITE.ref}/docs/model-card.md`}
           target="_blank"
           rel="noreferrer"
           className="font-mono underline underline-offset-4"

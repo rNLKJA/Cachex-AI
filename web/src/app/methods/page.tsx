@@ -126,7 +126,7 @@ export default function MethodsPage() {
                     <td className="text-muted-foreground py-2 pr-3">{p.how}</td>
                     <td className="py-2 pr-3">
                       <a
-                        href={`${SITE.repo}/blob/main/${p.source}`}
+                        href={`${SITE.repo}/blob/${SITE.ref}/${p.source}`}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono text-xs underline underline-offset-4"
@@ -209,13 +209,18 @@ export default function MethodsPage() {
               McNemar for shortest-path rates), search variants on the same positions,
               colour-swapped game pairs on the same seeds, agents compared through Elo differences
               taken from the same bootstrap refits (never by whether two intervals overlap), and LLM
-              versus baselines on exactly the games the model finished.
+              versus each baseline on exactly the games the model finished (games won by only one of
+              them, with an exact McNemar test).
             </li>
             <li>
               <strong>LLM answers are scored per turn, one rule for both providers:</strong> the
               rate reported is the share of turns whose first answer was rejected, split into
               illegal moves and replies with no usable move (malformed, cut off or refused), because
-              retries on the same turn are not independent trials.
+              retries on the same turn are not independent trials. Turns within a game are not
+              independent either (same model, prompt and position history), so the Wilson interval
+              is on the effective number of turns after a design effect estimated from how much the
+              rate varies between games, never below 1 (DR-005). With a handful of games the design
+              effect is itself rough.
             </li>
             <li>
               <strong>Effect sizes, not just p-values:</strong> differences in win rate and Elo with
@@ -346,7 +351,7 @@ export default function MethodsPage() {
         </Section>
 
         <Section id="ai-use" eyebrow="Transparency" title="AI use statement">
-          <Markdown source={withoutTitle(readDoc("ai-use-statement.md"))} />
+          <Markdown nested source={withoutTitle(readDoc("ai-use-statement.md"))} />
           <p className="mt-6 text-sm">
             <Link href="/ai-log" className="underline underline-offset-4">
               Open the AI audit log

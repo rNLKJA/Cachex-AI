@@ -56,15 +56,10 @@ function resolveHref(href: string): { href: string; external: boolean } {
   if (dr) return { href: `/methods/decisions/${dr[1]}`, external: false };
   if (href.endsWith("model-card.md")) return { href: "/methods/agent-card", external: false };
   if (href.endsWith("ai-use-statement.md")) return { href: "/methods#ai-use", external: false };
-  return { href: `${SITE.repo}/blob/main/docs/${href}`, external: true };
+  return { href: `${SITE.repo}/blob/${SITE.ref}/docs/${href}`, external: true };
 }
 
-const components: Components = {
-  h1: ({ children }) => <h2 className="mt-8 text-2xl font-semibold first:mt-0">{children}</h2>,
-  h2: ({ children }) => (
-    <h2 className="mt-8 text-xl font-semibold first:mt-0 sm:text-2xl">{children}</h2>
-  ),
-  h3: ({ children }) => <h3 className="mt-6 text-lg font-semibold">{children}</h3>,
+const sharedComponents: Components = {
   p: ({ children }) => <p className="text-foreground/90 mt-3 leading-relaxed">{children}</p>,
   ul: ({ children }) => <ul className="mt-3 list-disc space-y-1.5 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="mt-3 list-decimal space-y-1.5 pl-5">{children}</ol>,
@@ -126,10 +121,37 @@ const components: Components = {
   hr: () => <hr className="my-8" />,
 };
 
-export function Markdown({ source, className }: { source: string; className?: string }) {
+/** Standalone documents: the page title is the h1, so markdown headings start at h2. */
+const topLevel: Components = {
+  ...sharedComponents,
+  h1: ({ children }) => <h2 className="mt-8 text-2xl font-semibold first:mt-0">{children}</h2>,
+  h2: ({ children }) => (
+    <h2 className="mt-8 text-xl font-semibold first:mt-0 sm:text-2xl">{children}</h2>
+  ),
+  h3: ({ children }) => <h3 className="mt-6 text-lg font-semibold">{children}</h3>,
+};
+
+/** Inside a page section that has its own h2: markdown headings move one level down. */
+const nestedLevel: Components = {
+  ...sharedComponents,
+  h1: ({ children }) => <h3 className="mt-8 text-xl font-semibold first:mt-0">{children}</h3>,
+  h2: ({ children }) => <h3 className="mt-8 text-lg font-semibold first:mt-0">{children}</h3>,
+  h3: ({ children }) => <h4 className="mt-6 font-semibold">{children}</h4>,
+};
+
+export function Markdown({
+  source,
+  className,
+  nested = false,
+}: {
+  source: string;
+  className?: string;
+  /** Rendered under a section heading: shift headings down a level (h2 becomes h3). */
+  nested?: boolean;
+}) {
   return (
     <div className={cn("max-w-3xl", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={nested ? nestedLevel : topLevel}>
         {source}
       </ReactMarkdown>
     </div>

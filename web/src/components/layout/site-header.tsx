@@ -60,7 +60,8 @@ export function SiteHeader() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "text-muted-foreground hover:bg-muted hover:text-foreground rounded-md px-2 py-1.5 text-sm whitespace-nowrap transition-colors sm:px-2.5",
+                  // The nav scrolls sideways and would clip an outside focus ring: draw it inside.
+                  "text-muted-foreground hover:bg-muted hover:text-foreground rounded-md px-2 py-1.5 text-sm whitespace-nowrap transition-colors focus-visible:outline-offset-[-2px] sm:px-2.5",
                   active && "bg-muted text-foreground",
                 )}
               >

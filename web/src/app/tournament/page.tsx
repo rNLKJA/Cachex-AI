@@ -95,6 +95,12 @@ export default function TournamentPage() {
   const worst = shuffled.reduce((a, b) => (b.meanRatio.estimate < a.meanRatio.estimate ? b : a));
   const deepest = shuffled.find((g) => g.n === 6 && g.depth === 3)!;
   const allMatch = ab.samples.every((s) => s.valueMatches && s.textbookValueMatches);
+  // The averages hide an all-or-nothing distribution: most searches prune nothing.
+  const ownOrder = ab.samples.filter((s) => s.order === "shuffled");
+  const pruned = ownOrder.filter((s) => s.ratio < 1);
+  const prunedRange = pruned.length
+    ? [Math.min(...pruned.map((s) => s.ratio)), Math.max(...pruned.map((s) => s.ratio))]
+    : null;
 
   return (
     <div className="table-felt">
@@ -430,14 +436,19 @@ export default function TournamentPage() {
                 is better.
               </p>
               <p>
-                The original prunes very little (at best it still visits{" "}
-                {formatPct(worst.meanRatio.estimate)} of the tree). The cause is one line in{" "}
+                In the agent&apos;s own move order the original prunes very little: averaged per
+                board size and depth it still visits at least {formatPct(worst.meanRatio.estimate)}{" "}
+                of the tree, and {ownOrder.length - pruned.length} of {ownOrder.length} searches
+                visited every node. The cause is one line in{" "}
                 <code className="font-mono text-sm">minimax.py</code>: the minimising branch updates
                 beta with{" "}
                 <code className="font-mono text-sm">if beta &lt;= min_score: beta = min_score</code>
-                , which can only raise beta, so the window never narrows there. The answer is still
-                right ({allMatch ? "all" : "not all"} {ab.samples.length} searches returned the same
-                root value as plain minimax), just slow. With{" "}
+                , which can only raise beta, so beta stays at +infinity and a cut-off can only
+                happen once the search finds a line it scores as a forced win for Red.
+                {prunedRange &&
+                  ` The ${pruned.length} searches where that happened visited ${formatPct(prunedRange[0])} to ${formatPct(prunedRange[1])} of the tree.`}{" "}
+                The answer is still right ({allMatch ? "all" : "not all"} {ab.samples.length}{" "}
+                searches returned the same root value as plain minimax), just slow. With{" "}
                 <code className="font-mono text-sm">beta = min(beta, min_score)</code> the same
                 search on 6 × 6 at depth 3 would visit {formatPct(deepest.textbookRatio.estimate)}{" "}
                 of the tree instead of {formatPct(deepest.meanRatio.estimate)}. The agent on this
