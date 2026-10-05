@@ -1,69 +1,501 @@
-import Image from "next/image";
+import { ArrowRight, Bot, BrainCircuit, GitBranch, Route, Swords } from "lucide-react";
+import Link from "next/link";
 
-export default function Home() {
+import { HexBoard } from "@/components/board/hex-board";
+import { StaticBoard } from "@/components/landing/static-board";
+import { GitHubIcon } from "@/components/layout/github-icon";
+import { ColourDot } from "@/components/play/primitives";
+import { Button } from "@/components/ui/button";
+import { FEATURES } from "@/lib/agent/evaluation";
+import { TARGET_RATES } from "@/lib/agent/player";
+import { deterministicSelfPlay } from "@/lib/agent/self-play";
+import benchmark from "@/lib/data/agent-benchmark.json";
+import { SITE } from "@/lib/site";
+
+export default function HomePage() {
+  const { game } = deterministicSelfPlay(7);
+  const cells: ("red" | "blue" | null)[] = [];
+  for (let r = 0; r < 7; r++) for (let q = 0; q < 7; q++) cells.push(game.board.get(r, q));
+  const winning = game.result?.kind === "win" ? game.result.cluster : null;
+  const last = game.log.at(-1)!;
+  const lastMove = last.action[0] === "PLACE" ? ([last.action[1], last.action[2]] as const) : null;
+
+  const totals = benchmark.results.reduce(
+    (acc, r) => ({ wins: acc.wins + r.wins, games: acc.games + r.games }),
+    { wins: 0, games: 0 },
+  );
+  const winRate = Math.round((totals.wins / totals.games) * 100);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="table-felt">
+      {/* Hero */}
+      <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 pt-10 pb-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:pt-20 lg:pb-24">
+        <div>
+          <p className="text-muted-foreground text-xs font-medium tracking-[0.22em] uppercase">
+            {SITE.subject.code} · {SITE.subject.name} · University of Melbourne
           </p>
+          <h1 className="mt-4 text-5xl leading-[0.95] font-semibold sm:text-6xl lg:text-7xl">
+            Cachex
+            <br />
+            <span className="from-red-player via-gold to-blue-player bg-gradient-to-r bg-clip-text text-transparent">
+              Arena
+            </span>
+          </h1>
+          <p className="text-muted-foreground mt-6 max-w-xl text-lg">
+            In 2022 we built a game-playing agent for{" "}
+            <strong className="text-foreground">Cachex</strong>, a Hex-like race to connect opposite
+            edges of a hexagonal board, with captures and a first-move steal. Here it is again,
+            ported line by line from Python to run in your browser.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg" className="h-11 px-5 text-base">
+              <Link href="/play">
+                <Swords /> Play the agent
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="h-11 px-5 text-base">
+              <Link href="/spectate">
+                <Bot /> Watch AI vs AI
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="ghost" className="h-11 px-4 text-base">
+              <Link href="/astar">
+                <Route /> A* Lab <ArrowRight />
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <figure className="relative mx-auto w-full max-w-xl">
+          <div className="bg-gold/10 absolute inset-8 -z-10 rounded-full blur-3xl" aria-hidden />
+          <HexBoard
+            n={7}
+            cells={cells}
+            winning={winning}
+            lastMove={lastMove}
+            label="Final position of the agent playing itself on a 7 by 7 board: Red has connected top and bottom."
+            className="drop-shadow-[0_30px_60px_rgb(0_0_0/0.3)]"
+          />
+          <figcaption className="text-muted-foreground mt-3 text-center text-xs">
+            A real game: the ported agent playing itself on 7 × 7. Red wins in {game.nturns} turns.
+          </figcaption>
+        </figure>
+      </section>
+
+      {/* Rules */}
+      <section aria-labelledby="rules" className="bg-card/30 border-y">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+          <SectionHeading id="rules" eyebrow="The game" title="Three rules, a lot of tension">
+            Two players take turns placing a tile on any empty hex. Whoever links their two edges
+            first wins.
+          </SectionHeading>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            <RuleCard
+              title="Connect your edges"
+              body="Red links the top and bottom edges; Blue links the left and right. A chain of touching tiles is all it takes."
+              caption="Red's chain runs from row 0 to row 4."
+            >
+              <StaticBoard
+                className="h-full w-auto"
+                label="Red chain connecting top and bottom on a 5 by 5 board"
+                position={{
+                  n: 5,
+                  tiles: [
+                    { colour: "red", coord: [0, 2] },
+                    { colour: "red", coord: [1, 2] },
+                    { colour: "red", coord: [2, 1] },
+                    { colour: "red", coord: [3, 1] },
+                    { colour: "red", coord: [4, 0] },
+                    { colour: "blue", coord: [2, 3] },
+                    { colour: "blue", coord: [3, 2] },
+                    { colour: "blue", coord: [1, 0] },
+                  ],
+                }}
+                winning={[
+                  [0, 2],
+                  [1, 2],
+                  [2, 1],
+                  [3, 1],
+                  [4, 0],
+                ]}
+              />
+            </RuleCard>
+            <RuleCard
+              title="Capture with a diamond"
+              body="Place a tile that closes a diamond around exactly two enemy tiles, with your own tile opposite, and both enemy tiles are removed."
+              caption="Blue plays (2, 1) and captures Red's (1, 1) and (2, 0)."
+            >
+              <div className="grid w-full grid-cols-2 items-center gap-3">
+                <figure>
+                  <StaticBoard
+                    label="Before: Red tiles at (1, 1) and (2, 0) sit between Blue's (1, 0) and the empty cell (2, 1)"
+                    highlights={[[2, 1]]}
+                    position={{
+                      n: 4,
+                      tiles: [
+                        { colour: "blue", coord: [1, 0] },
+                        { colour: "red", coord: [1, 1] },
+                        { colour: "red", coord: [2, 0] },
+                      ],
+                    }}
+                  />
+                  <figcaption className="text-muted-foreground mt-1 text-center text-xs">
+                    Before
+                  </figcaption>
+                </figure>
+                <figure>
+                  <StaticBoard
+                    label="After: Blue played (2, 1) and both red tiles were captured"
+                    lastMove={[2, 1]}
+                    position={{
+                      n: 4,
+                      tiles: [
+                        { colour: "blue", coord: [1, 0] },
+                        { colour: "blue", coord: [2, 1] },
+                      ],
+                    }}
+                  />
+                  <figcaption className="text-muted-foreground mt-1 text-center text-xs">
+                    After Blue plays
+                  </figcaption>
+                </figure>
+              </div>
+            </RuleCard>
+            <RuleCard
+              title="Steal the opening"
+              body="Red moves first, so Blue may answer by stealing: Red's tile is mirrored across the long diagonal and becomes Blue's."
+              caption="Red's opening at (1, 3) becomes Blue's (3, 1)."
+            >
+              <StaticBoard
+                className="h-full w-auto"
+                label="After a steal, Red's tile at (1, 3) becomes Blue's tile at (3, 1)"
+                position={{ n: 5, tiles: [{ colour: "blue", coord: [3, 1] }] }}
+                lastMove={[3, 1]}
+              />
+            </RuleCard>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Coursework */}
+      <section aria-labelledby="coursework" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+        <SectionHeading
+          id="coursework"
+          eyebrow="The coursework"
+          title="What we were asked, and what we built"
+        >
+          The project came in two parts. We have paraphrased the brief here; the original
+          specification is not reproduced.
+        </SectionHeading>
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <article className="bg-card/60 rounded-3xl border p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <Route className="text-gold size-5" />
+              <h3 className="text-xl font-semibold">Part A · Search</h3>
+            </div>
+            <p className="text-muted-foreground mt-3">
+              <strong className="text-foreground">The task:</strong> given a board with some
+              occupied cells, find a shortest chain of empty cells from a start to a goal using A*
+              with an admissible heuristic, and print its length and cells.
+            </p>
+            <p className="text-muted-foreground mt-3">
+              <strong className="text-foreground">What we built:</strong> a{" "}
+              <code className="font-mono text-sm">CachexBoard</code> of{" "}
+              <code className="font-mono text-sm">HexNode</code>s with a priority-queue A* over the
+              six hex neighbours, Minkowski heuristics (Manhattan or Euclidean), and an optional
+              colour that blocks the search. A notebook experiment compared the heuristics on
+              hundreds of random boards.
+            </p>
+            <Button asChild variant="outline" className="mt-5">
+              <Link href="/astar">
+                Open the A* Lab <ArrowRight />
+              </Link>
+            </Button>
+          </article>
+          <article className="bg-card/60 rounded-3xl border p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <BrainCircuit className="text-gold size-5" />
+              <h3 className="text-xl font-semibold">Part B · Game-playing agent</h3>
+            </div>
+            <p className="text-muted-foreground mt-3">
+              <strong className="text-foreground">The task:</strong> write a player the
+              subject&apos;s referee could run against random, greedy and search-based opponents,
+              within time and memory limits.
+            </p>
+            <ul className="text-muted-foreground mt-3 space-y-2">
+              <li>
+                <strong className="text-foreground">Minimax with alpha-beta pruning</strong>, Red
+                maximising and Blue minimising.
+              </li>
+              <li>
+                <strong className="text-foreground">Dynamic depth:</strong> depth 1 while at least{" "}
+                {TARGET_RATES[0] * 100}% of cells are empty, then 2, 3 and 4 below{" "}
+                {TARGET_RATES[0] * 100}%, {TARGET_RATES[1] * 100}% and {TARGET_RATES[2] * 100}%.
+              </li>
+              <li>
+                <strong className="text-foreground">Opening book</strong> for the first two turns,
+                and an <strong className="text-foreground">instant-win check</strong> before any
+                search.
+              </li>
+            </ul>
+            <Button asChild variant="outline" className="mt-5">
+              <Link href="/play">
+                Play against it <ArrowRight />
+              </Link>
+            </Button>
+          </article>
+        </div>
+
+        <div className="bg-card/60 mt-6 rounded-3xl border p-6 sm:p-8">
+          <h3 className="text-lg font-semibold">The evaluation function</h3>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Six hand-tuned features from <code className="font-mono">weights.json</code>, scored
+            from Red&apos;s point of view (Red&apos;s count adds, Blue&apos;s subtracts).
+          </p>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <li key={f.id} className="bg-background/50 rounded-2xl border p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-medium">{f.label}</span>
+                  <span
+                    className={
+                      f.sign > 0
+                        ? "text-gold font-mono text-sm"
+                        : "text-destructive font-mono text-sm"
+                    }
+                  >
+                    {f.sign > 0 ? "+" : "−"}
+                    {f.weight}
+                  </span>
+                </div>
+                <p className="text-muted-foreground mt-1 text-sm">{f.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Results */}
+      <section aria-labelledby="results" className="bg-card/30 border-y">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+          <SectionHeading id="results" eyebrow="Key results" title="From the original code">
+            The agent and search results come from running the original Python, unchanged, with the
+            subject&apos;s referee. The port is then checked against those same runs.
+          </SectionHeading>
+          <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <BigStat
+                value={`${winRate}%`}
+                label={`wins against the random agent (${totals.wins} of ${totals.games} games, both colours, n = 4–7)`}
+              />
+              <BigStat
+                value="8 & 13"
+                label="cells in the A* paths for the two sample inputs, matching the recorded outputs"
+              />
+              <BigStat
+                value="Exact"
+                label="parity: the TypeScript port reproduces the original paths, node counts, evaluations and moves"
+              />
+            </div>
+            <div className="bg-card/60 overflow-x-auto rounded-3xl border p-6">
+              <h3 className="font-semibold">Agent _4399 vs the random baseline</h3>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {benchmark.results[0].games} seeded games per row, generated by{" "}
+                <code className="font-mono">scripts/benchmark_agent.py</code>.
+              </p>
+              <table className="mt-4 w-full text-sm">
+                <thead className="text-muted-foreground text-left">
+                  <tr className="border-b">
+                    <th scope="col" className="py-2 font-medium">
+                      Board
+                    </th>
+                    <th scope="col" className="py-2 font-medium">
+                      Agent plays
+                    </th>
+                    <th scope="col" className="py-2 font-medium">
+                      Win rate
+                    </th>
+                    <th scope="col" className="py-2 text-right font-medium">
+                      W–L
+                    </th>
+                    <th scope="col" className="py-2 text-right font-medium">
+                      Avg turns
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchmark.results.map((r) => (
+                    <tr
+                      key={`${r.n}-${r.agentColour}`}
+                      className="border-border/50 border-b last:border-0"
+                    >
+                      <td className="py-2 font-mono">
+                        {r.n} × {r.n}
+                      </td>
+                      <td className="py-2">
+                        <span className="flex items-center gap-2 capitalize">
+                          <ColourDot colour={r.agentColour as "red" | "blue"} /> {r.agentColour}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="bg-muted h-1.5 w-24 overflow-hidden rounded-full"
+                            aria-hidden
+                          >
+                            <span
+                              className="bg-gold block h-full rounded-full"
+                              style={{ width: `${(r.wins / r.games) * 100}%` }}
+                            />
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            {Math.round((r.wins / r.games) * 100)}%
+                          </span>
+                        </span>
+                      </td>
+                      <td className="py-2 text-right font-mono tabular-nums">
+                        {r.wins}–{r.losses}
+                      </td>
+                      <td className="py-2 text-right font-mono tabular-nums">{r.avgTurns}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section
+        id="about"
+        aria-labelledby="about-title"
+        className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6"
+      >
+        <SectionHeading id="about-title" eyebrow="About this project" title="Credits and stack">
+          {SITE.subject.code} {SITE.subject.name}, University of Melbourne, {SITE.subject.term}.
+          Team _4399.
+        </SectionHeading>
+        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          <div className="bg-card/60 rounded-3xl border p-6">
+            <h3 className="font-semibold">Team</h3>
+            <ul className="mt-3 space-y-2 text-sm">
+              {SITE.team.map((m) => (
+                <li key={m.name}>
+                  {m.github ? (
+                    <a
+                      className="underline-offset-4 hover:underline"
+                      href={m.github}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {m.name}
+                    </a>
+                  ) : (
+                    m.name
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground mt-4 text-sm">
+              Team _4399, a two-person project. Both members are credited as authors in the original
+              source.
+            </p>
+          </div>
+          <div className="bg-card/60 rounded-3xl border p-6">
+            <h3 className="font-semibold">Original vs revived stack</h3>
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">2022</dt>
+              <dd>Python 3.6, NumPy, SciPy, Jupyter, the subject&apos;s referee</dd>
+              <dt className="text-muted-foreground">Now</dt>
+              <dd>
+                Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Web Workers, Vitest
+              </dd>
+            </dl>
+            <p className="text-muted-foreground mt-4 text-sm">
+              Parity fixtures are produced by running the original code with{" "}
+              <code className="font-mono">uv</code>.
+            </p>
+          </div>
+          <div className="bg-card/60 rounded-3xl border p-6">
+            <h3 className="font-semibold">Source and integrity</h3>
+            <p className="text-muted-foreground mt-3 text-sm">
+              The original submission is preserved unchanged in the repository&apos;s{" "}
+              <code className="font-mono">coursework/</code> folder for reference. If you are taking{" "}
+              {SITE.subject.code}, please respect academic integrity and do not copy it.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <a href={SITE.repo} target="_blank" rel="noreferrer">
+                  <GitHubIcon className="size-4" /> GitHub repository
+                </a>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <a href={`${SITE.repo}/tree/main/coursework`} target="_blank" rel="noreferrer">
+                  <GitBranch /> Original code
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SectionHeading({
+  id,
+  eyebrow,
+  title,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="max-w-2xl">
+      <p className="text-muted-foreground text-xs font-medium tracking-[0.22em] uppercase">
+        {eyebrow}
+      </p>
+      <h2 id={id} className="mt-2 text-3xl font-semibold sm:text-4xl">
+        {title}
+      </h2>
+      <p className="text-muted-foreground mt-3">{children}</p>
+    </div>
+  );
+}
+
+function RuleCard({
+  title,
+  body,
+  caption,
+  children,
+}: {
+  title: string;
+  body: string;
+  caption: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article className="bg-card/60 flex flex-col rounded-3xl border p-5">
+      <figure>
+        <div className="flex h-48 items-center justify-center">{children}</div>
+        <figcaption className="text-muted-foreground mt-2 text-center text-xs">
+          {caption}
+        </figcaption>
+      </figure>
+      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <p className="text-muted-foreground mt-1 text-sm">{body}</p>
+    </article>
+  );
+}
+
+function BigStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="bg-card/60 rounded-3xl border p-6">
+      <div className="font-display text-4xl font-semibold tracking-tight">{value}</div>
+      <p className="text-muted-foreground mt-1 text-sm">{label}</p>
     </div>
   );
 }
