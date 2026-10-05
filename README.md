@@ -1,13 +1,16 @@
 <div align="center">
 
-# Cachex AI
+# Cachex Arena
 
-A game-playing AI agent for **Cachex**, a hex-based connection game, built for the University of Melbourne **COMP30024 Artificial Intelligence** project (Semester 1, 2022).
+**Play our COMP30024 minimax agent, watch AI vs AI, and step through our A\* search, in the browser.**
 
-[![Python](https://img.shields.io/badge/Python-3.6-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![University of Melbourne](https://img.shields.io/badge/University%20of%20Melbourne-COMP30024-094183?style=for-the-badge)](https://handbook.unimelb.edu.au/2022/subjects/comp30024)
-[![Algorithm](https://img.shields.io/badge/Algorithm-Minimax%20%2B%20Alpha--Beta-orange?style=for-the-badge)](#approach)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![CI](https://github.com/rNLKJA/Cachex-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/rNLKJA/Cachex-AI/actions/workflows/ci.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![University of Melbourne](https://img.shields.io/badge/UniMelb-COMP30024-094183)](https://handbook.unimelb.edu.au/2022/subjects/comp30024)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+**Live demo: [cachex-ai.vercel.app](https://cachex-ai.vercel.app)**
 
 </div>
 
@@ -15,118 +18,135 @@ A game-playing AI agent for **Cachex**, a hex-based connection game, built for t
 
 ## Overview
 
-Cachex is a perfect-information, two-player connection game played on an *n* × *n* rhombic, hexagonally tiled board. It is based on the classic strategy game **Hex**. Two players, Red and Blue, take turns placing tiles. Red aims to form an unbroken chain of its tiles connecting the top and bottom edges of the board, while Blue aims to connect the left and right edges. The first player to complete a connection across their two sides wins.
+Cachex is a two-player connection game on an _n_ × _n_ rhombic hex board, based on Hex.
+Red links the top and bottom edges, Blue links the left and right. Two twists make it
+tactical: placing a tile that closes a **diamond** around two enemy tiles captures them, and
+Blue may **steal** Red's opening tile on its first move.
 
-The board also supports a *capture* rule and a one-off *steal* move, so the agent has to reason about more than just shortest paths.
+In Semester 1, 2022, team `_4399` (Sunchuangyu "Rin" Huang and Wei Zhao) built two things for
+COMP30024 Artificial Intelligence at the University of Melbourne:
 
-This repository holds two pieces of work that build on each other:
+- **Part A: search.** An A\* solver that finds the shortest chain of free cells between two
+  points, with Manhattan and Euclidean (Minkowski) heuristics and a notebook study comparing
+  their node expansions on random boards.
+- **Part B: a game-playing agent.** Minimax with alpha-beta pruning, a dynamically allocated
+  search depth, a hand-tuned six-feature evaluation function (`weights.json`), an opening book
+  and an instant-win check, run against the subject's referee.
 
-- **Part A — Searching.** A standalone solver that finds the shortest path between two cells on a Cachex board using the **A\* search algorithm**, treating opponent tiles as obstacles. This is the foundation for reasoning about connections.
-- **Part B — Competitive game agent.** A full playing agent that chooses its moves using **minimax search with alpha-beta pruning**, guided by a hand-crafted evaluation function. It is designed to beat random, greedy, and shallow adversarial opponents.
+This repository revives that work as **Cachex Arena**, a static Next.js app. The Python was
+ported to TypeScript line by line and is verified against the original code.
 
-## Approach
+### Features
 
-### Part A — A\* shortest-path search
+| Route | What you can do |
+| --- | --- |
+| `/` | What the coursework asked, what we built, key results from the original code, credits |
+| `/play` | Play the minimax agent (or the random baseline) on 3×3 to 10×10, as Red or Blue, with STEAL, capture animations, undo, a move log and a "why that move?" panel (search depth, top candidates, evaluation feature breakdown) |
+| `/spectate` | AI vs AI with play/pause/step, a speed control, seeded replays and an evaluation trend chart |
+| `/astar` | Paint tiles, move start and goal, animate A\* expansions (open and closed sets), toggle Manhattan/Euclidean and the original block-colour option, load or export the original `sample_input.json` format, compare against the recorded outputs, and rerun the heuristic study |
 
-The agent models the board as a graph of `HexNode` cells, each knowing its valid neighbours (six hex directions, with the two major-axis diagonals removed). A\* then finds the lowest-cost path from a start cell to a goal cell:
+Agents and the heuristic study run in **Web Workers**, so the board stays responsive.
 
-- **Cost (g):** one step per tile traversed.
-- **Heuristic (h):** a Minkowski distance, configurable as Manhattan (*p* = 1) or Euclidean (*p* = 2), which stays admissible on the hex grid.
-- **Blocks:** tiles of the opponent's colour are treated as impassable, so the path the agent finds is the real shortest connection available to it.
+### Key results (from the original Python)
 
-### Part B — Minimax with alpha-beta pruning
+- The `_4399` agent beat the original random agent in **144 of 160 games** (90%) across
+  board sizes 4–7, playing both colours (`scripts/benchmark_agent.py`).
+- A\* reproduces the recorded outputs for both sample inputs (paths of **8** and **13** cells).
+- The TypeScript port matches the original **exactly**: paths and node-expansion counts for 184 A\*
+  runs, every board state and capture across 40 random refereed games, evaluation features on
+  237 positions, 179 minimax searches, 143 agent moves and 5 full self-play games
+  (844 Vitest tests in total).
 
-The competitive agent searches the game tree to choose its move:
+## Tech stack
 
-- **Minimax + alpha-beta pruning.** Red plays as the maximising player and Blue as the minimising player. Alpha-beta pruning cuts off branches that cannot affect the result, so the agent searches deeper within the same time budget.
-- **Dynamic search depth.** Rather than a fixed depth, the agent adjusts how far it looks ahead based on how full the board is, searching deeper as the board empties out and the branching factor falls.
-- **Evaluation function.** Non-terminal states are scored by a weighted mix of features defined in `weights.json`: number of empty cells, tiles sitting in strong *triangle* formations, tile counts per colour, and positional value (corners and edges score higher than the centre). Negative features penalise tiles in capture-prone *diamond* shapes and weak formations. An A\* "steps to win" estimate is also implemented as an optional feature.
-- **Opening book.** The first couple of moves are hard-coded from analysis of the game: on a size-3 board Blue has a forced win, and on larger boards the agent opens on a strong cell or uses the steal move when the opponent has taken it.
+| | 2022 original | 2026 revival |
+| --- | --- | --- |
+| Language | Python 3.6 | TypeScript (strict) |
+| Libraries | NumPy, SciPy, Jupyter | Next.js 16 (App Router), React 19, Tailwind CSS v4, shadcn/ui (Radix), lucide-react, next-themes |
+| Compute | CLI / referee | Web Workers, fully client-side; no backend |
+| Testing | Notebook experiments | Vitest parity tests against fixtures generated by the original code |
+| Tooling | conda | pnpm, ESLint, Prettier, GitHub Actions, uv for the Python scripts |
 
-## Repository Structure
+## Repository structure
 
 ```
 Cachex-AI/
-├── Project Part A/
-│   ├── code/
-│   │   ├── search/          # entry point (python -m search ...)
-│   │   ├── cachex/          # CachexBoard + HexNode (A* lives here)
-│   │   ├── astar/           # A* f/g/h score helper
-│   │   ├── constant/        # shared constants
-│   │   ├── error/           # custom exceptions
-│   │   └── sample_input*.json
-│   ├── notebook/            # A* development notebooks and benchmark charts
-│   ├── report/              # written report (PDF)
-│   └── specification/       # project and game spec (PDF)
-│
-├── Project Part B/
-│   ├── code/
-│   │   ├── _4399/           # the agent: player, minimax, eval_func, A_star
-│   │   ├── utility/         # board, evaluation, weights.json, helpers
-│   │   └── referee/         # supplied driver that runs a match
-│   └── skeleton-code-B/     # original skeleton, incl. sample opponents
-│
-├── environment.yml          # conda environment (Python 3.6)
-├── requirements.txt         # pip dependencies (numpy, scipy)
-└── LICENSE                  # MIT
+├── coursework/                 # original submission, unchanged (see coursework/README.md)
+│   ├── Project Part A/         #   A* search: code/, notebook/, report/, specification/
+│   ├── Project Part B/         #   minimax agent: code/ (_4399, utility, referee), skeleton-code-B/
+│   ├── _archive/               #   README from the semester
+│   └── environment.yml, requirements.txt, pyproject.toml
+├── scripts/                    # uv scripts that run the original Python to produce artefacts
+│   ├── generate_parity_fixtures.py
+│   └── benchmark_agent.py
+├── web/                        # the deployable Next.js app (Vercel root)
+│   ├── public/
+│   └── src/
+│       ├── app/                # routes: / , /play, /spectate, /astar, not-found, OG image, icon
+│       ├── components/         # ui/ (shadcn), layout/, board/, play/, astar/, landing/
+│       ├── hooks/              # match state, Web Worker clients
+│       ├── lib/                # framework-free ports + tests
+│       │   ├── cachex/         #   referee rules: board, captures, STEAL, win/draw
+│       │   ├── agent/          #   Board_4399, evaluation features, minimax, opening book, random agent
+│       │   ├── astar/          #   A*, CPython set-order simulation, input format, presets, study
+│       │   ├── data/           #   agent-benchmark.json (generated)
+│       │   └── __fixtures__/   #   parity fixtures (generated)
+│       └── workers/            # agent.worker.ts, astar-benchmark.worker.ts
+├── .github/workflows/ci.yml
+└── LICENSE
 ```
 
-## Getting Started
+## Local development
 
-### Prerequisites
-
-The project was assessed on Python 3.6 with NumPy and SciPy. The simplest way to match that is conda:
+Requires Node.js 20+ and pnpm 10.
 
 ```bash
-# create and activate the environment
-conda create -n COMP30024 --file environment.yml
-conda activate COMP30024
+cd web
+pnpm install
+pnpm dev            # http://localhost:3000
 
-# install the pip dependencies
-pip install -r requirements.txt
+pnpm lint           # ESLint
+pnpm typecheck      # tsc --noEmit
+pnpm test           # Vitest (unit + parity tests)
+pnpm build && pnpm start
 ```
 
-### Running Part A (A\* search)
+## How the data artefacts are generated
 
-From `Project Part A/code/`, run the search module against an input file. An optional block type (`Red` or `Blue`) marks which colour's tiles act as obstacles:
+Both scripts import the **original, unchanged** Python from `coursework/` and are run with
+[uv](https://docs.astral.sh/uv/) (dependencies are declared inline, PEP 723):
 
 ```bash
-cd "Project Part A/code"
-
-# find a path with no blocking colour
-python -m search sample_input.json
-
-# find a path treating Blue tiles as blocks
-python -m search sample_input.json Blue
+uv run scripts/generate_parity_fixtures.py   # → web/src/lib/__fixtures__/parity-part-{a,b}.json
+uv run scripts/benchmark_agent.py            # → web/src/lib/data/agent-benchmark.json
 ```
 
-The program prints the path length followed by each `(r, q)` coordinate along the shortest path.
+- **Parity fixtures** record the original outputs for the sample inputs, the notebook test
+  boards and seeded random boards (A\*), plus seeded random referee games, evaluation features,
+  minimax results, `Player.action` choices and deterministic self-play (Part B). For Part B the
+  script replaces `random.shuffle` with a canonical sort and the evaluation's random bias with 1,
+  so results are deterministic; nothing else is patched.
+- **Neighbour order.** The original A\* iterates neighbours out of a Python `set`, so ties are
+  broken by CPython's hash-table order. `web/src/lib/astar/python-set-order.ts` simulates
+  CPython 3.8+ tuple hashing and set probing so the port returns the same paths and node counts.
+  Fixtures are generated with CPython 3.12.
+- **Benchmark.** `_4399` vs `random_play_agent`, 20 seeded games per board size and colour.
+  The original `get_valid_actions` returns a `set` of `("PLACE", r, q)` tuples, and CPython
+  randomises string hashes per process, so the script re-runs itself with `PYTHONHASHSEED=0`;
+  with that pin the output is byte-for-byte reproducible.
 
-### Running Part B (a match between agents)
+## Credits
 
-From `Project Part B/code/`, the supplied referee runs a full game between two player packages. The pattern is:
+- **Sunchuangyu "Rin" Huang** ([@rNLKJA](https://github.com/rNLKJA)) and **Wei Zhao**, team `_4399`.
+- The referee (`coursework/Project Part B/code/referee`) and project specifications were provided
+  by the COMP30024 teaching team at the University of Melbourne. The website paraphrases the task
+  and does not host the specification PDFs.
 
-```bash
-python -m referee <n> <player1> <player2>
-```
+## Academic integrity
 
-where `n` is the board size and each player argument is a Python package containing a `Player` class. The agent in this repository is the `_4399` package. For example, to play the agent (as Red) against the bundled random agent on a size-5 board:
+The original submission is preserved in [`coursework/`](coursework) for reference. If you are
+a current COMP30024 student, please respect academic integrity and do not copy this work.
 
-```bash
-cd "Project Part B/code"
+## Licence
 
-# this repo's agent vs. a random opponent
-python -m referee 5 _4399 skeleton-code-B.random_play_agent
-
-# a human vs. this repo's agent
-python -m referee 5 skeleton-code-B.human_player _4399
-```
-
-Run `python -m referee -h` for the full list of options, including time and space limits, verbosity, and game logging.
-
-## Notes
-
-- This was a two-person project (team `_4399`): **Sunchuangyu "Rin" Huang** and **Wei Zhao**.
-- Most of the logic was first prototyped in the Jupyter notebooks under `Project Part A/notebook/` and then refactored into the `.py` modules, so the notebooks are a useful window into the design process and the A\* benchmarking.
-- Australian spelling is used throughout.
-- Released under the MIT Licence. If you are a current COMP30024 student, please treat this as reference only and respect academic integrity rather than copying any code.
+[MIT](LICENSE) © 2022 Sunchuangyu Huang & Wei Zhao.
