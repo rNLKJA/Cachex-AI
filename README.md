@@ -105,8 +105,8 @@ API key into **AI settings** (the key icon in the header):
   Completions API). This is a static site with no server, so the key is never sent to us, never
   logged and never committed.
 - **Grounding and review:** the commentator receives only the agent's own numbers for the move and
-  an automatic check verifies feature directions, numbers and moves against them; you then accept,
-  edit or reject it. Every model output is labelled "AI-generated".
+  an automatic check verifies feature directions, numbers, moves and which player moved against
+  them; you then accept, edit or reject it. Every model output is labelled "AI-generated".
 - **Audit log:** every call (success or failure) is recorded in IndexedDB with timestamp, feature,
   provider, model, exact input, output, latency, token usage and the human decision. View it at
   **`/ai-log`** and export it as JSON or CSV. Keys are never written to it.

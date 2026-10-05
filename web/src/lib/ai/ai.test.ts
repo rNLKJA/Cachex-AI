@@ -607,9 +607,40 @@ describe("commentator", () => {
 
   it("passes a faithful explanation", () => {
     const result = groundingCheck(faithful, facts);
-    expect(result.checks.map((c) => c.ok)).toEqual([true, true, true]);
+    expect(result.checks.map((c) => c.ok)).toEqual([true, true, true, true]);
     expect(result.passed).toBe(true);
+    expect(result.checks[3].detail).toBe("Says Red made the move, as in the input.");
     expect(commentaryToText(faithful)).toContain(faithful.summary);
+  });
+
+  it("flags commentary that says the wrong player moved", () => {
+    expect(facts.mover).toBe("Red");
+    const wrong = groundingCheck(
+      { ...faithful, summary: `Blue played ${facts.chosen_move} to slow Red down.` },
+      facts,
+    );
+    expect(wrong.passed).toBe(false);
+    expect(wrong.checks[3]).toMatchObject({
+      ok: false,
+      detail: "Says Blue made a move, but the mover in the input is Red.",
+    });
+    expect(
+      groundingCheck({ ...faithful, caveat: "Blue has taken nothing yet." }, facts).passed,
+    ).toBe(false);
+    // Naming the other colour without saying it moved is fine.
+    const mentions = groundingCheck(
+      {
+        ...faithful,
+        summary: `Red chose ${facts.chosen_move}; it keeps Blue's tiles apart and blocks Blue.`,
+      },
+      facts,
+    );
+    expect(mentions.checks[3].ok).toBe(true);
+    const silent = groundingCheck({ ...faithful, summary: "The move scored well." }, facts);
+    expect(silent.checks[3]).toMatchObject({
+      ok: true,
+      detail: "Does not say which player moved.",
+    });
   });
 
   it("flags a wrong direction, an invented number and an invented move", () => {

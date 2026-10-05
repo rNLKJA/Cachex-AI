@@ -274,8 +274,30 @@ export function groundingCheck(output: Commentary, facts: CommentaryFacts): Grou
         : `Not among the chosen move or candidates: ${strange.join(", ")}.`,
   });
 
+  // 4. Whenever a colour is said to have made a move, it is the colour that moved.
+  const claimed = [...text.matchAll(MOVER_CLAIM)].map((m) => m[1]);
+  const misnamed = claimed.filter((c) => c.toLowerCase() !== facts.mover.toLowerCase());
+  checks.push({
+    label: "The right player made the move",
+    ok: misnamed.length === 0,
+    detail:
+      misnamed.length === 0
+        ? claimed.length
+          ? `Says ${facts.mover} made the move, as in the input.`
+          : "Does not say which player moved."
+        : `Says ${misnamed[0]} made a move, but the mover in the input is ${facts.mover}.`,
+  });
+
   return { passed: checks.every((c) => c.ok), checks };
 }
+
+/**
+ * "Red played", "Blue chose", "Red has taken": a colour directly followed by a
+ * move verb. Narrow on purpose, so that naming the other colour ("it blocks
+ * Red", "Red's tiles") is not mistaken for a claim about who moved.
+ */
+const MOVER_CLAIM =
+  /\b(red|blue)\s+(?:has\s+|then\s+|now\s+)?(?:played|plays|placed|places|chose|chooses|picked|picks|selected|selects|took|takes|taken|stole|steals)\b/gi;
 
 /** Plain-text rendering, used as the starting point when the human edits. */
 export function commentaryToText(c: Commentary): string {

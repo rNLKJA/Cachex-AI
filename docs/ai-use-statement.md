@@ -44,8 +44,9 @@ processes the request under its own terms and bills your account.
 
 - Every model output on the site is labelled **AI-generated** with the model name.
 - Commentary is checked automatically against the facts it was given: cited feature
-  directions must match the sign of their contribution, and every number and move it mentions
-  must appear in the input. The result of that check is shown next to the text.
+  directions must match the sign of their contribution, every number and move it mentions
+  must appear in the input, and if it says which player moved, that must be the player who did.
+  The result of that check is shown next to the text.
 - You review each commentary and record a decision: accept, edit (your edit is stored next to
   the original) or reject. Commentary you did not review where it appeared (for example because
   the game moved on) stays "awaiting review" and can be decided later on `/ai-log`.
