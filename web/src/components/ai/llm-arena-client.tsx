@@ -9,26 +9,29 @@ import { Field, Panel, Segmented } from "@/components/play/primitives";
 import { EstimateCI, IntervalAxis, IntervalBar } from "@/components/stats/interval";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollTable } from "@/components/stats/scroll-table";
+import { ScrollRegion, ScrollTable } from "@/components/stats/scroll-table";
 import { useAgentWorker } from "@/hooks/use-agent-worker";
 import { callStructured } from "@/lib/ai/client";
 import {
+  type FormatFailure,
+  LLM_PLAYER_MAX_TOKENS,
   type LlmGameRecord,
   LlmMoveSchema,
   type ScheduledGame,
+  completedSchedule,
   llmGamesCsvRows,
-  playBaselineGame,
   playLlmGame,
   scheduleGames,
+  summariseBaseline,
   summariseLlmGames,
 } from "@/lib/ai/llm-player";
-import { isAiError } from "@/lib/ai/types";
+import { type AiErrorKind, isAiError } from "@/lib/ai/types";
 import { Game } from "@/lib/cachex/game";
 import type { Action, Colour } from "@/lib/cachex/types";
 import { toCsv } from "@/lib/csv";
 import { downloadText } from "@/lib/download";
 import { formatNumber, formatPct } from "@/lib/stats/format";
-import { type ProportionCI, wilson } from "@/lib/stats/proportion";
+import type { ProportionCI } from "@/lib/stats/proportion";
 import { AiBadge } from "./ai-badge";
 import { useAi } from "./ai-provider";
 
@@ -47,13 +50,22 @@ type Live = {
 
 type Status = { kind: "idle" } | { kind: "running" } | { kind: "done"; stopped: string | null };
 
-function baselineRow(n: number, schedule: ScheduledGame[], agent: "random" | "greedy") {
-  const games = schedule.map((g) => playBaselineGame(n, g, agent));
-  return {
-    wins: wilson(games.filter((g) => g.won).length, games.length),
-    draws: games.filter((g) => g.draw).length,
-  };
-}
+/**
+ * Provider errors that mean "no usable move in this answer". They are counted
+ * as format failures for the model (the same rule for every provider) and the
+ * game goes on; anything else (key, rate limit, network) stops the run.
+ */
+const FORMAT_FAILURES: Partial<Record<AiErrorKind, FormatFailure>> = {
+  "invalid-output": "malformed",
+  truncated: "truncated",
+  refusal: "refusal",
+};
+
+const BASELINES = [
+  { id: "random", label: "Random baseline" },
+  { id: "greedy", label: "Greedy one-ply baseline" },
+  { id: "first-legal", label: "First legal cell (scripted)" },
+] as const;
 
 export function LlmArenaClient() {
   const { credentials, ready, openSettings, audit } = useAi();
@@ -122,7 +134,7 @@ export function LlmArenaClient() {
                   ...prompt,
                   schema: LlmMoveSchema,
                   schemaName: "cachex_move",
-                  maxTokens: 1024,
+                  maxTokens: LLM_PLAYER_MAX_TOKENS,
                 },
                 {
                   audit,
@@ -141,9 +153,15 @@ export function LlmArenaClient() {
               setLive((l) => (l ? { ...l, lastReason: res.data.reason } : l));
               return { move: res.data, latencyMs: res.entry.latencyMs, usage: res.usage };
             } catch (err) {
-              // A reply that does not fit the schema is the model's mistake: count it as illegal.
-              if (isAiError(err) && err.kind === "invalid-output") {
-                return { move: null, latencyMs: performance.now() - started, usage: null };
+              // No usable move in the reply: a format failure for the model, not a crash.
+              const failure = isAiError(err) ? FORMAT_FAILURES[err.kind] : undefined;
+              if (isAiError(err) && failure) {
+                return {
+                  move: null,
+                  failure,
+                  latencyMs: performance.now() - started,
+                  usage: err.usage,
+                };
               }
               throw err;
             }
@@ -168,19 +186,21 @@ export function LlmArenaClient() {
   };
 
   const summary = records.length ? summariseLlmGames(records) : null;
-  const baselines = useMemo(
-    () =>
-      ran
-        ? {
-            random: baselineRow(ran.n, ran.schedule, "random"),
-            greedy: baselineRow(ran.n, ran.schedule, "greedy"),
-          }
-        : {
-            random: baselineRow(size, schedule, "random"),
-            greedy: baselineRow(size, schedule, "greedy"),
-          },
-    [ran, size, schedule],
+  // Before a run, the baselines preview the planned schedule. Once a run has
+  // started, they cover only the games the model finished, so every row is
+  // always on the same seeds and colours (a stop or an error mid-run included).
+  const compared = useMemo(
+    () => (ran ? completedSchedule(ran.schedule, records) : schedule),
+    [ran, records, schedule],
   );
+  const comparedN = ran?.n ?? size;
+  const baselines = useMemo(
+    () => BASELINES.map((b) => ({ ...b, summary: summariseBaseline(comparedN, compared, b.id) })),
+    [compared, comparedN],
+  );
+  const scheduled = ran?.schedule.length ?? schedule.length;
+  const asRed = compared.filter((g) => g.llmColour === "red").length;
+  const asBlue = compared.length - asRed;
 
   const liveGame = live ? Game.fromActions(ran?.n ?? size, live.actions) : null;
   const cells = liveGame
@@ -238,8 +258,8 @@ export function LlmArenaClient() {
               <p className="text-muted-foreground text-xs">
                 Model: <span className="text-foreground font-mono">{credentials.model}</span> (
                 {credentials.provider}). Each answer is one API call billed to your key; a game
-                takes about {(size * size) / 2} calls. Illegal answers are retried up to 3 times,
-                then the game is forfeited.
+                takes about {(size * size) / 2} calls. A rejected answer (an illegal move, or a
+                reply with no usable move) is retried up to 3 times, then the game is forfeited.
               </p>
             ) : (
               <p className="bg-muted/50 rounded-xl border p-3 text-sm">
@@ -309,10 +329,26 @@ export function LlmArenaClient() {
             className="min-w-[640px]"
             caption={
               <>
-                Same {ran?.schedule.length ?? schedule.length} seeds and colours for every row, on{" "}
-                {ran?.n ?? size} × {ran?.n ?? size}; the opponent is always the original minimax
-                agent. Baselines are computed in your browser. Wilson 95% intervals: with a handful
-                of games they are wide, which is the honest answer.
+                {ran && compared.length < scheduled ? (
+                  <>
+                    Same {compared.length} of {scheduled} scheduled seeds and colours for every row
+                    (the games the model finished)
+                  </>
+                ) : (
+                  <>Same {compared.length} seeds and colours for every row</>
+                )}
+                , on {comparedN} × {comparedN}; the opponent is always the original minimax agent.
+                {asRed !== asBlue && (
+                  <>
+                    {" "}
+                    Colours are unbalanced ({asRed} as Red, {asBlue} as Blue), so the first-move
+                    effect does not cancel.
+                  </>
+                )}{" "}
+                Baselines are computed in your browser. Wilson 95% intervals: with a handful of
+                games they are wide, which is the honest answer. The scripted baseline plays the
+                first empty cell in (r, q) order; as Blue that line wins unless Red blocks it, so a
+                model that beats the agent should also beat this row.
               </>
             }
           >
@@ -328,8 +364,9 @@ export function LlmArenaClient() {
                 <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap">
                   Win rate (95% CI)
                 </th>
-                <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap">
-                  Illegal answers
+                <th scope="col" className="py-2 pr-3 font-medium">
+                  First answer rejected
+                  <span className="block font-normal">per turn (95% CI)</span>
                 </th>
                 <th scope="col" className="py-2 text-right font-medium whitespace-nowrap">
                   Latency · tokens
@@ -343,10 +380,15 @@ export function LlmArenaClient() {
                 ci={summary?.wins ?? null}
                 extra={
                   summary
-                    ? `${summary.forfeits} forfeit${summary.forfeits === 1 ? "" : "s"}`
+                    ? `${summary.forfeits} forfeit${summary.forfeits === 1 ? "" : "s"} · ${summary.turns} turn${summary.turns === 1 ? "" : "s"}`
                     : "not run yet"
                 }
-                illegal={summary?.illegalRate ?? null}
+                illegal={summary?.firstAnswerRejected ?? null}
+                illegalDetail={
+                  summary
+                    ? `${summary.firstAnswerIllegal} illegal move${summary.firstAnswerIllegal === 1 ? "" : "s"} · ${summary.firstAnswerFormat} with no usable move`
+                    : undefined
+                }
                 illegalNote="–"
                 perf={
                   summary
@@ -354,20 +396,20 @@ export function LlmArenaClient() {
                     : "–"
                 }
               />
-              <Row
-                label="Random baseline"
-                ci={baselines.random.wins}
-                extra={`${baselines.random.draws} draws`}
-                illegal={null}
-                perf="instant"
-              />
-              <Row
-                label="Greedy one-ply baseline"
-                ci={baselines.greedy.wins}
-                extra={`${baselines.greedy.draws} draws`}
-                illegal={null}
-                perf="instant"
-              />
+              {baselines.map((b) => (
+                <Row
+                  key={b.id}
+                  label={b.label}
+                  ci={b.summary?.wins ?? null}
+                  extra={
+                    b.summary
+                      ? `${b.summary.draws} draw${b.summary.draws === 1 ? "" : "s"}`
+                      : "waiting for the first finished game"
+                  }
+                  illegal={null}
+                  perf="instant"
+                />
+              ))}
             </tbody>
           </ScrollTable>
         </section>
@@ -377,7 +419,7 @@ export function LlmArenaClient() {
             <h2 id="per-game" className="text-xl font-semibold">
               Games
             </h2>
-            <div className="relative overflow-x-auto">
+            <ScrollRegion label="Games played by the model">
               <table className="w-full min-w-[560px] text-sm">
                 <thead className="text-muted-foreground text-left text-xs">
                   <tr className="border-b">
@@ -394,7 +436,7 @@ export function LlmArenaClient() {
                       Turns
                     </th>
                     <th scope="col" className="py-2 pr-3 text-right font-medium">
-                      Answers (illegal)
+                      Answers (rejected)
                     </th>
                     <th scope="col" className="py-2 font-medium">
                       Rejected answers
@@ -409,7 +451,7 @@ export function LlmArenaClient() {
                       <td className="py-2 pr-3 capitalize">{r.result}</td>
                       <td className="py-2 pr-3 text-right font-mono tabular-nums">{r.turns}</td>
                       <td className="py-2 pr-3 text-right font-mono tabular-nums">
-                        {r.attempts} ({r.illegalAttempts})
+                        {r.attempts} ({r.attempts - r.llmMoves})
                       </td>
                       <td className="text-muted-foreground py-2 text-xs">
                         {r.rejections.length ? r.rejections.join("; ") : "none"}
@@ -418,7 +460,7 @@ export function LlmArenaClient() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
             <p className="text-muted-foreground text-xs">
               Every model call (prompt, reply, latency, tokens) is in the{" "}
               <Link href="/ai-log" className="underline underline-offset-4">
@@ -439,6 +481,7 @@ function Row({
   ci,
   extra,
   illegal,
+  illegalDetail,
   illegalNote = "0 by construction",
   perf,
 }: {
@@ -447,6 +490,7 @@ function Row({
   ci: ProportionCI | null;
   extra: string;
   illegal: ProportionCI | null;
+  illegalDetail?: string;
   illegalNote?: string;
   perf: string;
 }) {
@@ -479,10 +523,15 @@ function Row({
       </td>
       <td className="py-2 pr-3">
         {illegal ? (
-          <EstimateCI
-            estimate={`${illegal.successes}/${illegal.n}`}
-            interval={pctCI(illegal.lower, illegal.upper)}
-          />
+          <>
+            <EstimateCI
+              estimate={`${illegal.successes}/${illegal.n}`}
+              interval={pctCI(illegal.lower, illegal.upper)}
+            />
+            {illegalDetail && (
+              <span className="text-muted-foreground block text-xs">{illegalDetail}</span>
+            )}
+          </>
         ) : (
           <span className="text-muted-foreground text-xs">{illegalNote}</span>
         )}

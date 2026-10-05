@@ -185,6 +185,15 @@ function factNumbers(facts: CommentaryFacts): Set<string> {
   return out;
 }
 
+/**
+ * Numbers written in a piece of text. A number may end a sentence ("was
+ * 12.34."), so a following full stop only blocks a match when a digit comes
+ * after it; numbers glued to letters ("r2", "3x") are not counted.
+ */
+export function mentionedNumbers(text: string): string[] {
+  return [...text.matchAll(/(?<![\w.])-?\d+(?:\.\d+)?(?!\w|\.\d)/g)].map((m) => m[0]);
+}
+
 export function groundingCheck(output: Commentary, facts: CommentaryFacts): GroundingResult {
   const checks: GroundingCheck[] = [];
   const byId = new Map(facts.features_after_move.map((f) => [f.feature, f]));
@@ -215,7 +224,7 @@ export function groundingCheck(output: Commentary, facts: CommentaryFacts): Grou
     " ",
   );
   const known = factNumbers(facts);
-  const mentioned = [...text.matchAll(/(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])/g)].map((m) => m[0]);
+  const mentioned = mentionedNumbers(text);
   const unknown = [
     ...new Set(mentioned.filter((m) => !known.has(m) && !known.has(String(Number(m))))),
   ];

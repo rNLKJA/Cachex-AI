@@ -1,37 +1,22 @@
 /**
  * OpenAI adapter: Chat Completions with a strict JSON-schema response format,
  * called straight from the browser with the visitor's own key. The reply is
- * validated with the same zod schema used for Anthropic.
+ * validated with the same zod schema used for Anthropic, under the same
+ * output-token budget (`max_completion_tokens`, which for reasoning models
+ * includes their reasoning tokens), and failures carry the same evidence.
  */
-import { z } from "zod";
+import { openAiJsonSchema, parseStructured } from "./schema";
+import {
+  AiError,
+  type FetchLike,
+  type StructuredRequest,
+  type StructuredResponse,
+  type TokenUsage,
+} from "./types";
 
-import { AiError, type FetchLike, type StructuredRequest, type StructuredResponse } from "./types";
+export { strictJsonSchema } from "./schema";
 
 export const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-
-type JsonSchema = { [key: string]: unknown };
-
-/**
- * OpenAI's strict mode needs every object to list all of its properties as
- * required and to forbid additional ones.
- */
-export function strictJsonSchema(schema: JsonSchema): JsonSchema {
-  const visit = (node: unknown): unknown => {
-    if (Array.isArray(node)) return node.map(visit);
-    if (node === null || typeof node !== "object") return node;
-    const out: JsonSchema = {};
-    for (const [k, v] of Object.entries(node)) {
-      if (k === "$schema") continue;
-      out[k] = visit(v);
-    }
-    if (out.type === "object" && out.properties && typeof out.properties === "object") {
-      out.required = Object.keys(out.properties as object);
-      out.additionalProperties = false;
-    }
-    return out;
-  };
-  return visit(schema) as JsonSchema;
-}
 
 interface ChatCompletion {
   model?: string;
@@ -52,8 +37,10 @@ export async function callOpenAI<T>(
     signal,
   }: { fetch?: FetchLike; signal?: AbortSignal } = {},
 ): Promise<StructuredResponse<T>> {
+  const maxTokens = req.maxTokens ?? 2048;
   const body = {
     model,
+    max_completion_tokens: maxTokens,
     messages: [
       { role: "system", content: req.system },
       { role: "user", content: req.user },
@@ -63,7 +50,7 @@ export async function callOpenAI<T>(
       json_schema: {
         name: req.schemaName,
         strict: true,
-        schema: strictJsonSchema(z.toJSONSchema(req.schema) as JsonSchema),
+        schema: openAiJsonSchema(req.schema),
       },
     },
   };
@@ -101,28 +88,23 @@ export async function callOpenAI<T>(
   }
 
   const choice = json.choices?.[0];
-  if (choice?.message?.refusal) throw new AiError("refusal", choice.message.refusal);
-  if (choice?.finish_reason === "length") throw new AiError("truncated");
+  const usage: TokenUsage | null = json.usage
+    ? {
+        inputTokens: json.usage.prompt_tokens ?? 0,
+        outputTokens: json.usage.completion_tokens ?? 0,
+      }
+    : null;
   const rawText = choice?.message?.content ?? "";
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch {
-    throw new AiError("invalid-output", "reply was not valid JSON");
+  // Same order as the Anthropic adapter: why the model stopped, then parsing.
+  if (choice?.message?.refusal) {
+    throw new AiError("refusal", choice.message.refusal, undefined, {
+      rawText: rawText || choice.message.refusal,
+      usage,
+    });
   }
-  const result = req.schema.safeParse(parsed);
-  if (!result.success) {
-    throw new AiError("invalid-output", result.error.issues[0]?.message ?? "schema mismatch");
+  if (choice?.finish_reason === "length") {
+    throw new AiError("truncated", `limit ${maxTokens} tokens`, undefined, { rawText, usage });
   }
-  return {
-    data: result.data,
-    rawText,
-    model: json.model ?? model,
-    usage: json.usage
-      ? {
-          inputTokens: json.usage.prompt_tokens ?? 0,
-          outputTokens: json.usage.completion_tokens ?? 0,
-        }
-      : null,
-  };
+  const data = parseStructured(req.schema, rawText, { rawText, usage });
+  return { data, rawText, model: json.model ?? model, usage };
 }

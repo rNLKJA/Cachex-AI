@@ -4,8 +4,8 @@
  *  - Preferences (provider, model ids) are not secret: localStorage.
  *  - The API key, one per provider, goes to sessionStorage by default, so it
  *    is gone when the tab closes. Only if the visitor ticks "remember on this
- *    device" is it written to localStorage instead. "Forget key" removes it
- *    from both.
+ *    device" is it written to localStorage instead. "Forget keys" removes
+ *    every provider's key from both.
  *
  * Storage is injected so this module is testable and safe during SSR.
  */
@@ -96,6 +96,26 @@ export function saveKey(
 export function forgetKey(provider: Provider, session: KV | null, local: KV | null): void {
   session?.removeItem(keyName(provider));
   local?.removeItem(keyName(provider));
+}
+
+export const PROVIDERS: readonly Provider[] = ["anthropic", "openai"];
+
+/** Remove every provider's key from both storages. */
+export function forgetAllKeys(session: KV | null, local: KV | null): void {
+  for (const p of PROVIDERS) forgetKey(p, session, local);
+}
+
+/** The keys saved for each provider (the UI shows all of them, not just the selected one). */
+export function loadAllKeys(
+  session: KV | null,
+  local: KV | null,
+): Partial<Record<Provider, StoredKey>> {
+  const out: Partial<Record<Provider, StoredKey>> = {};
+  for (const p of PROVIDERS) {
+    const k = loadKey(p, session, local);
+    if (k) out[p] = k;
+  }
+  return out;
 }
 
 /** "sk-ant-…a1b2": enough to recognise a key without displaying it. */

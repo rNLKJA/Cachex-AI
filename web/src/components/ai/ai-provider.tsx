@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -15,13 +16,13 @@ import {
   type AiPrefs,
   DEFAULT_PREFS,
   type StoredKey,
-  forgetKey,
-  loadKey,
+  forgetAllKeys,
+  loadAllKeys,
   loadPrefs,
   saveKey,
   savePrefs,
 } from "@/lib/ai/settings";
-import type { Credentials } from "@/lib/ai/types";
+import type { Credentials, Provider } from "@/lib/ai/types";
 import { AiSettingsDialog } from "./ai-settings-dialog";
 
 /*
@@ -59,8 +60,11 @@ interface AiContextValue {
   setPrefs: (prefs: AiPrefs) => void;
   /** The stored key for the selected provider, if any. */
   storedKey: StoredKey | null;
+  /** Every provider's stored key, so none is hidden when another provider is selected. */
+  savedKeys: Partial<Record<Provider, StoredKey>>;
   saveApiKey: (key: string, remember: boolean) => void;
-  forgetApiKey: () => void;
+  /** Remove every saved key, for every provider, from both storages. */
+  forgetApiKeys: () => void;
   /** Ready-to-use credentials, or null when no key is set. */
   credentials: Credentials | null;
   audit: AuditStore;
@@ -80,11 +84,12 @@ export function AiProvider({ children }: { children: ReactNode }) {
     () => (snapshot >= 0 ? loadPrefs(storages().local) : DEFAULT_PREFS),
     [snapshot],
   );
-  const storedKey = useMemo(() => {
-    if (snapshot < 0) return null;
+  const savedKeys = useMemo(() => {
+    if (snapshot < 0) return {};
     const { session, local } = storages();
-    return loadKey(prefs.provider, session, local);
-  }, [snapshot, prefs.provider]);
+    return loadAllKeys(session, local);
+  }, [snapshot]);
+  const storedKey = savedKeys[prefs.provider] ?? null;
 
   const setPrefs = useCallback((next: AiPrefs) => {
     savePrefs(storages().local, next);
@@ -98,11 +103,27 @@ export function AiProvider({ children }: { children: ReactNode }) {
     },
     [prefs.provider],
   );
-  const forgetApiKey = useCallback(() => {
+  const forgetApiKeys = useCallback(() => {
     const { session, local } = storages();
-    forgetKey(prefs.provider, session, local);
+    forgetAllKeys(session, local);
     emit();
-  }, [prefs.provider]);
+  }, []);
+
+  // The dialog is opened from several buttons and rendered here, so Radix has
+  // no trigger to hand focus back to: remember the opener ourselves.
+  const opener = useRef<HTMLElement | null>(null);
+  const openSettings = useCallback(() => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsOpen(true);
+  }, []);
+  const returnFocus = useCallback((event: Event) => {
+    const el = opener.current;
+    opener.current = null;
+    if (el && el.isConnected) {
+      event.preventDefault();
+      el.focus();
+    }
+  }, []);
 
   const credentials = useMemo<Credentials | null>(
     () =>
@@ -123,19 +144,20 @@ export function AiProvider({ children }: { children: ReactNode }) {
     prefs,
     setPrefs,
     storedKey,
+    savedKeys,
     saveApiKey,
-    forgetApiKey,
+    forgetApiKeys,
     credentials,
     audit,
     settingsOpen,
-    openSettings: () => setSettingsOpen(true),
+    openSettings,
     setSettingsOpen,
   };
 
   return (
     <AiContext.Provider value={value}>
       {children}
-      <AiSettingsDialog />
+      <AiSettingsDialog onCloseAutoFocus={returnFocus} />
     </AiContext.Provider>
   );
 }

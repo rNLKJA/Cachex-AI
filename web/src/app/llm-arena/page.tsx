@@ -21,13 +21,15 @@ export default function LlmArenaPage() {
           <p>
             The model plays short games against the original minimax agent. Each turn it gets the
             rules, the board, the move history and the full list of legal moves, and must answer
-            with a JSON move. The referee checks every answer: an illegal or malformed one is
-            counted and the model is asked again (up to three times) before it forfeits.
+            with a JSON move. The referee checks every answer: an illegal move, or a reply with no
+            usable move (malformed, cut off or refused), is counted and the model is asked again (up
+            to three times) before it forfeits. Both providers are scored by the same rule.
           </p>
           <p className="text-sm">
-            The same seeds and colours are replayed with the random and greedy agents in the
-            model&apos;s seat, so the comparison is like for like. This page is an evaluation
-            harness, not a claim: a few games give wide intervals.{" "}
+            The same seeds and colours are replayed with the random and greedy agents and a scripted
+            first-legal-cell player in the model&apos;s seat, so the comparison is like for like (if
+            a run stops early, on the games the model finished). This page is an evaluation harness,
+            not a claim: a few games give wide intervals.{" "}
             <Link href="/methods#ai-use" className="underline underline-offset-4">
               What is sent to the provider
             </Link>

@@ -77,10 +77,12 @@ export async function callStructured<T>(
     const entry: AuditEntry = {
       ...base,
       output: null,
-      outputText: null,
+      // Whatever came back (a cut-off or malformed reply) and the tokens it
+      // cost are kept, so the evidence behind a failure can be inspected.
+      outputText: error.rawText,
       error: { kind: error.kind, message: error.message },
       latencyMs: now() - started,
-      usage: null,
+      usage: error.usage,
       humanDecision: humanDecision === "pending" ? "not-applicable" : humanDecision,
     };
     // A failed call is still logged; never let logging hide the real error.

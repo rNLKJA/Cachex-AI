@@ -83,15 +83,31 @@ const MESSAGES: Record<AiErrorKind, string> = {
   aborted: "The request was cancelled.",
 };
 
+/**
+ * What the provider returned even though the call failed (a reply cut off at
+ * the token limit, a refusal, or JSON that did not match the schema). Kept so
+ * the audit log records the evidence and the tokens that were billed.
+ */
+export interface AiErrorEvidence {
+  rawText?: string | null;
+  usage?: TokenUsage | null;
+}
+
 export class AiError extends Error {
   readonly kind: AiErrorKind;
   readonly status?: number;
+  /** The model's raw reply, when there was one. */
+  readonly rawText: string | null;
+  /** Tokens the provider reported for the failed call, when it reported any. */
+  readonly usage: TokenUsage | null;
 
-  constructor(kind: AiErrorKind, detail?: string, status?: number) {
+  constructor(kind: AiErrorKind, detail?: string, status?: number, evidence: AiErrorEvidence = {}) {
     super(detail ? `${MESSAGES[kind]} (${detail})` : MESSAGES[kind]);
     this.name = "AiError";
     this.kind = kind;
     this.status = status;
+    this.rawText = evidence.rawText ?? null;
+    this.usage = evidence.usage ?? null;
   }
 }
 

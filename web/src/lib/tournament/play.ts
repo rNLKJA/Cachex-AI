@@ -45,7 +45,8 @@ export type MoveFn = (
   seed: number,
 ) => Action | { action: Action; nodes?: number; depth?: number | null };
 
-const defaultMove: MoveFn = (id, n, history, colour, seed) => {
+/** The built-in agents, each with its own seeded random stream. */
+export const defaultTournamentMove: MoveFn = (id, n, history, colour, seed) => {
   const decision = tournamentMove(id, n, history, colour, createRng(seed));
   const e = decision.explanation;
   return {
@@ -57,7 +58,10 @@ const defaultMove: MoveFn = (id, n, history, colour, seed) => {
 
 export function playTournamentGame(
   spec: GameSpec,
-  { move = defaultMove, now = () => performance.now() }: { move?: MoveFn; now?: () => number } = {},
+  {
+    move = defaultTournamentMove,
+    now = () => performance.now(),
+  }: { move?: MoveFn; now?: () => number } = {},
 ): GameRecord {
   const game = new Game(spec.n);
   const history: Action[] = [];

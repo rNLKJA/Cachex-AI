@@ -91,7 +91,11 @@ export function SpectateClient() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                onClick={() => setPlaying((p) => !p)}
+                onClick={() => {
+                  // Resuming follows the latest move again (explained moves keep their commentary).
+                  if (!playing) setSelected(null);
+                  setPlaying(!playing);
+                }}
                 disabled={over}
                 aria-pressed={playing && !over}
               >
@@ -190,6 +194,12 @@ export function SpectateClient() {
                 colour={shown !== undefined ? (shown % 2 === 0 ? "red" : "blue") : undefined}
                 turn={shown !== undefined ? shown + 1 : undefined}
                 n={n}
+                // Pause autoplay and pin this move, so the next move does not replace
+                // the one being explained while the model is answering.
+                onExplainStart={() => {
+                  setPlaying(false);
+                  if (shown !== undefined) setSelected(shown);
+                }}
               />
             </Panel>
 

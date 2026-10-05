@@ -4,12 +4,19 @@
  *
  * The model sees the rules, the board, the move history and the full list of
  * legal moves, and must answer with structured JSON. Every answer is checked
- * against the referee: a malformed or illegal answer counts as an illegal
- * attempt and the model is asked again (with the reason), up to
- * `maxAttempts`; after that it forfeits the game. Colours alternate so the
- * model plays as many games as Red as it does as Blue, and the same schedule
- * (seeds and colours) is replayed with the random baseline in the model's
- * seat, giving a side-by-side comparison on identical conditions.
+ * against the referee and classified the same way for every provider:
+ *
+ *  - an illegal move: well-formed JSON naming a move the rules do not allow;
+ *  - a format failure: no usable move at all (JSON that does not match the
+ *    schema, a reply cut off at the token limit, or a refusal).
+ *
+ * Either way the model is asked again (with the reason), up to `maxAttempts`;
+ * after that it forfeits the game. The headline rate is per turn: the share
+ * of the model's turns whose first answer was rejected, because retries on
+ * the same turn are not independent trials. Colours alternate so the model
+ * plays as many games as Red as it does as Blue, and the same schedule (seeds
+ * and colours) is replayed with baseline players in the model's seat, giving
+ * a side-by-side comparison on identical conditions.
  */
 import { z } from "zod";
 
@@ -19,7 +26,7 @@ import { deriveSeed } from "@/lib/rng";
 import { median } from "@/lib/stats/descriptive";
 import { type ProportionCI, wilson } from "@/lib/stats/proportion";
 import { type AgentId } from "@/lib/tournament/agents";
-import { playTournamentGame } from "@/lib/tournament/play";
+import { defaultTournamentMove, playTournamentGame } from "@/lib/tournament/play";
 import type { TokenUsage } from "./types";
 
 export const LlmMoveSchema = z.object({
@@ -44,16 +51,21 @@ Rules:
 
 You must choose exactly one move from the list of legal moves you are given.`;
 
+/**
+ * Text board. Cells are two characters wide and each row is shifted right by
+ * one character (half a cell), so the neighbours (r+1, q-1) and (r+1, q) sit
+ * symmetrically below-left and below-right of (r, q), as on the real board.
+ */
 export function renderBoard(game: Game): string {
   const n = game.n;
   const lines: string[] = [];
-  lines.push(`     ${Array.from({ length: n }, (_, q) => `q${q}`.padEnd(3)).join("")}`);
+  lines.push(`q:   ${Array.from({ length: n }, (_, q) => String(q).padEnd(2)).join("")}`.trimEnd());
   for (let r = 0; r < n; r++) {
     const row = Array.from({ length: n }, (_, q) => {
       const c = game.board.get(r, q);
-      return (c === "red" ? "R" : c === "blue" ? "B" : ".").padEnd(3);
-    }).join("");
-    lines.push(`r${String(r).padEnd(2)} ${" ".repeat(r)}${row}`);
+      return c === "red" ? "R" : c === "blue" ? "B" : ".";
+    }).join(" ");
+    lines.push(`r${String(r).padEnd(3)} ${" ".repeat(r)}${row}`);
   }
   return lines.join("\n");
 }
@@ -82,7 +94,7 @@ export function buildMovePrompt(
   const user = [
     `Board size n = ${n}. You are ${colour === "red" ? "Red" : "Blue"} (${colour === "red" ? "connect row 0 to row " + (n - 1) : "connect column 0 to column " + (n - 1)}). It is turn ${history.length + 1}.`,
     "",
-    "Board (R = red, B = blue, . = empty; each row is drawn shifted to show the hex layout):",
+    "Board (R = red, B = blue, . = empty; each row is shifted half a cell to show the hex layout):",
     renderBoard(game),
     "",
     "Moves so far:",
@@ -121,12 +133,31 @@ export function validateMove(n: number, history: readonly Action[], move: LlmMov
   return { ok: true, action };
 }
 
+/** Why an answer carried no usable move. */
+export type FormatFailure = "malformed" | "truncated" | "refusal";
+
+export const FORMAT_FAILURE_REASON: Record<FormatFailure, string> = {
+  malformed: "The reply did not match the move format.",
+  truncated: "The reply was cut off at the token limit.",
+  refusal: "The model declined to answer.",
+};
+
 export interface LlmCallResult {
-  /** null when the reply could not be parsed into the move schema. */
+  /** null when the reply carried no usable move (see `failure`). */
   move: LlmMove | null;
+  /** Why `move` is null; treated as "malformed" when absent. */
+  failure?: FormatFailure;
   latencyMs: number;
   usage: TokenUsage | null;
 }
+
+/**
+ * Output-token budget per answer, the same for both providers. Generous for a
+ * one-line JSON move so that a reasoning model's thinking rarely hits it; a
+ * reply that does is recorded as "truncated" (a format failure), not as an
+ * illegal move.
+ */
+export const LLM_PLAYER_MAX_TOKENS = 4096;
 
 export interface ScheduledGame {
   index: number;
@@ -151,8 +182,18 @@ export interface LlmGameRecord extends ScheduledGame {
   turns: number;
   actions: Action[];
   llmMoves: number;
+  /** Turns on which the model was asked for a move (including a forfeited one). */
+  llmTurns: number;
+  /** Turns whose first answer was a well-formed but illegal move. */
+  firstAnswerIllegal: number;
+  /** Turns whose first answer carried no usable move. */
+  firstAnswerFormat: number;
+  /** All answers, retries included. */
   attempts: number;
+  /** Answers naming an illegal move. */
   illegalAttempts: number;
+  /** Answers with no usable move, by kind. */
+  formatFailures: Record<FormatFailure, number>;
   rejections: string[];
   latencyMs: number[];
   inputTokens: number;
@@ -194,8 +235,12 @@ export async function playLlmGame({
     turns: 0,
     actions: history,
     llmMoves: 0,
+    llmTurns: 0,
+    firstAnswerIllegal: 0,
+    firstAnswerFormat: 0,
     attempts: 0,
     illegalAttempts: 0,
+    formatFailures: { malformed: 0, truncated: 0, refusal: 0 },
     rejections: [],
     latencyMs: [],
     inputTokens: 0,
@@ -216,6 +261,7 @@ export async function playLlmGame({
 
     let chosen: Action | null = null;
     let feedback: string | undefined;
+    record.llmTurns += 1;
     for (let attempt = 1; attempt <= maxAttempts && chosen === null; attempt++) {
       const prompt = buildMovePrompt(n, history, colour, feedback);
       const res = await askLlm(prompt, { turn: history.length + 1, attempt });
@@ -226,15 +272,24 @@ export async function playLlmGame({
         record.inputTokens += res.usage.inputTokens;
         record.outputTokens += res.usage.outputTokens;
       }
-      const check: MoveCheck = res.move
-        ? validateMove(n, history, res.move)
-        : { ok: false, reason: "The reply did not match the move format." };
-      if (check.ok) chosen = check.action;
-      else {
+      let reason: string;
+      if (res.move === null) {
+        const failure = res.failure ?? "malformed";
+        record.formatFailures[failure] += 1;
+        if (attempt === 1) record.firstAnswerFormat += 1;
+        reason = FORMAT_FAILURE_REASON[failure];
+      } else {
+        const check = validateMove(n, history, res.move);
+        if (check.ok) {
+          chosen = check.action;
+          continue;
+        }
         record.illegalAttempts += 1;
-        record.rejections.push(`turn ${history.length + 1}: ${check.reason}`);
-        feedback = check.reason;
+        if (attempt === 1) record.firstAnswerIllegal += 1;
+        reason = check.reason;
       }
+      record.rejections.push(`turn ${history.length + 1}: ${reason}`);
+      feedback = reason;
     }
     if (chosen === null) {
       record.result = "forfeit";
@@ -259,22 +314,84 @@ export async function playLlmGame({
   return record;
 }
 
-/** The same schedule with a built-in agent in the model's seat (no API calls). */
+/**
+ * Players that can take the model's seat in a baseline replay: any tournament
+ * agent, or "first-legal", a trivial script that always plays the first empty
+ * cell in (r, q) order and never steals. As Blue that script fills row 0 from
+ * left to right, which is a winning line unless Red blocks it, so it shows
+ * what a "win" against the minimax agent is worth.
+ */
+export type BaselineId = AgentId | "first-legal";
+
+export function firstLegalAction(n: number, history: readonly Action[]): Action {
+  const [first] = Game.fromActions(n, history).legalPlacements();
+  if (!first) throw new Error("no legal placement");
+  return place(first[0], first[1]);
+}
+
+/** The same schedule with a baseline player in the model's seat (no API calls). */
 export function playBaselineGame(
   n: number,
   g: ScheduledGame,
-  agent: AgentId,
+  agent: BaselineId,
   opponentAgent: AgentId = "minimax-dynamic",
 ) {
-  const rec = playTournamentGame({
-    id: `baseline-${g.index}`,
-    n,
-    red: g.llmColour === "red" ? agent : opponentAgent,
-    blue: g.llmColour === "blue" ? agent : opponentAgent,
-    seed: g.seed,
-    round: g.index,
-  });
+  // A scripted seat still needs an AgentId in the record; its moves come from the override.
+  const seatId: AgentId = agent === "first-legal" ? "random" : agent;
+  const rec = playTournamentGame(
+    {
+      id: `baseline-${g.index}`,
+      n,
+      red: g.llmColour === "red" ? seatId : opponentAgent,
+      blue: g.llmColour === "blue" ? seatId : opponentAgent,
+      seed: g.seed,
+      round: g.index,
+    },
+    {
+      move: (id, size, history, colour, seed) =>
+        agent === "first-legal" && colour === g.llmColour
+          ? firstLegalAction(size, history)
+          : defaultTournamentMove(id, size, history, colour, seed),
+    },
+  );
   return { ...g, won: rec.winner === g.llmColour, draw: rec.winner === null, turns: rec.turns };
+}
+
+export interface BaselineSummary {
+  games: number;
+  wins: ProportionCI;
+  draws: number;
+  /** Games the baseline played as Red (the rest as Blue). */
+  asRed: number;
+}
+
+/**
+ * The scheduled games the model actually finished, in schedule order. A run
+ * stopped early (by the visitor, a rate limit or a network error) must be
+ * compared with the baselines on exactly these seeds and colours.
+ */
+export function completedSchedule(
+  schedule: readonly ScheduledGame[],
+  records: readonly Pick<LlmGameRecord, "index">[],
+): ScheduledGame[] {
+  const done = new Set(records.map((r) => r.index));
+  return schedule.filter((g) => done.has(g.index));
+}
+
+/** A baseline replayed on the given games, or null when there are none. */
+export function summariseBaseline(
+  n: number,
+  games: readonly ScheduledGame[],
+  agent: BaselineId,
+): BaselineSummary | null {
+  if (games.length === 0) return null;
+  const played = games.map((g) => playBaselineGame(n, g, agent));
+  return {
+    games: played.length,
+    wins: wilson(played.filter((g) => g.won).length, played.length),
+    draws: played.filter((g) => g.draw).length,
+    asRed: games.filter((g) => g.llmColour === "red").length,
+  };
 }
 
 export interface LlmEvaluationSummary {
@@ -283,9 +400,21 @@ export interface LlmEvaluationSummary {
   losses: number;
   draws: number;
   forfeits: number;
-  /** Illegal or malformed answers over all answers. */
-  illegalRate: ProportionCI;
+  /** Games lost by running out of attempts on a turn, over all games. */
+  forfeitRate: ProportionCI;
+  /** Turns on which the model was asked for a move. */
+  turns: number;
+  /**
+   * Share of turns whose first answer was rejected (illegal move or no usable
+   * move). Per turn, not per answer: retries after a rejection are strongly
+   * correlated with it, so counting them would overstate the sample size.
+   */
+  firstAnswerRejected: ProportionCI;
+  firstAnswerIllegal: number;
+  firstAnswerFormat: number;
   attempts: number;
+  illegalAttempts: number;
+  formatFailures: Record<FormatFailure, number>;
   meanLatencyMs: number;
   medianLatencyMs: number;
   meanInputTokens: number | null;
@@ -293,9 +422,12 @@ export interface LlmEvaluationSummary {
 }
 
 export function summariseLlmGames(records: readonly LlmGameRecord[]): LlmEvaluationSummary {
+  const sum = (f: (r: LlmGameRecord) => number) => records.reduce((s, r) => s + f(r), 0);
   const latencies = records.flatMap((r) => r.latencyMs);
-  const attempts = records.reduce((s, r) => s + r.attempts, 0);
-  const illegal = records.reduce((s, r) => s + r.illegalAttempts, 0);
+  const turns = sum((r) => r.llmTurns);
+  const firstIllegal = sum((r) => r.firstAnswerIllegal);
+  const firstFormat = sum((r) => r.firstAnswerFormat);
+  const forfeits = records.filter((r) => r.result === "forfeit").length;
   const reported = records.filter((r) => r.usageReported);
   const reportedAttempts = reported.reduce((s, r) => s + r.attempts, 0);
   return {
@@ -303,9 +435,19 @@ export function summariseLlmGames(records: readonly LlmGameRecord[]): LlmEvaluat
     wins: wilson(records.filter((r) => r.result === "win").length, records.length),
     losses: records.filter((r) => r.result === "loss" || r.result === "forfeit").length,
     draws: records.filter((r) => r.result === "draw").length,
-    forfeits: records.filter((r) => r.result === "forfeit").length,
-    illegalRate: wilson(illegal, attempts),
-    attempts,
+    forfeits,
+    forfeitRate: wilson(forfeits, records.length),
+    turns,
+    firstAnswerRejected: wilson(firstIllegal + firstFormat, turns),
+    firstAnswerIllegal: firstIllegal,
+    firstAnswerFormat: firstFormat,
+    attempts: sum((r) => r.attempts),
+    illegalAttempts: sum((r) => r.illegalAttempts),
+    formatFailures: {
+      malformed: sum((r) => r.formatFailures.malformed),
+      truncated: sum((r) => r.formatFailures.truncated),
+      refusal: sum((r) => r.formatFailures.refusal),
+    },
     meanLatencyMs: latencies.length ? latencies.reduce((s, x) => s + x, 0) / latencies.length : NaN,
     medianLatencyMs: latencies.length ? median(latencies) : NaN,
     meanInputTokens: reportedAttempts
@@ -327,8 +469,14 @@ export function llmGamesCsvRows(records: readonly LlmGameRecord[]) {
     winner: r.winner ?? "",
     turns: r.turns,
     llm_moves: r.llmMoves,
+    llm_turns: r.llmTurns,
+    first_answer_illegal: r.firstAnswerIllegal,
+    first_answer_no_move: r.firstAnswerFormat,
     answers: r.attempts,
     illegal_answers: r.illegalAttempts,
+    malformed_answers: r.formatFailures.malformed,
+    truncated_answers: r.formatFailures.truncated,
+    refused_answers: r.formatFailures.refusal,
     mean_latency_ms: r.latencyMs.length
       ? Math.round(r.latencyMs.reduce((s, x) => s + x, 0) / r.latencyMs.length)
       : null,

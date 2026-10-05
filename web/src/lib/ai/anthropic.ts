@@ -5,14 +5,24 @@
  * `anthropic-dangerous-direct-browser-access: true` header that Anthropic
  * requires for CORS. That is appropriate here because the key belongs to the
  * visitor and never leaves their machine except to api.anthropic.com.
- * Structured output uses `output_config.format` (JSON schema from zod) and
- * `messages.parse`, which validates the reply against the same schema.
+ *
+ * Structured output uses `output_config.format` with a JSON schema built from
+ * the zod schema (enums kept, see ./schema). The reply is handled in a fixed
+ * order: first why the model stopped (a refusal or a reply cut off at
+ * `max_tokens` is reported as such, not as a format error), then JSON
+ * parsing, then zod validation. Every failure carries the raw text and token
+ * usage so the audit log can show what came back and what it cost.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-
 import { supportsEffort } from "./models";
-import { AiError, type FetchLike, type StructuredRequest, type StructuredResponse } from "./types";
+import { anthropicJsonSchema, parseStructured } from "./schema";
+import {
+  AiError,
+  type FetchLike,
+  type StructuredRequest,
+  type StructuredResponse,
+  type TokenUsage,
+} from "./types";
 
 export function toAiError(err: unknown): AiError {
   if (err instanceof AiError) return err;
@@ -48,16 +58,16 @@ export async function callAnthropic<T>(
     timeout: 90_000,
     ...(fetch ? { fetch } : {}),
   });
-  let message;
+  let message: Anthropic.Message;
   try {
-    message = await client.messages.parse(
+    message = await client.messages.create(
       {
         model,
         max_tokens: req.maxTokens ?? 2048,
         system: req.system,
         messages: [{ role: "user", content: req.user }],
         output_config: {
-          format: zodOutputFormat(req.schema),
+          format: { type: "json_schema", schema: anthropicJsonSchema(req.schema) },
           // Short, factual tasks: keep Sonnet's thinking light. Haiku 4.5 takes no effort.
           ...(supportsEffort(model) ? { effort: "low" as const } : {}),
         },
@@ -68,17 +78,27 @@ export async function callAnthropic<T>(
     throw toAiError(err);
   }
 
-  if (message.stop_reason === "refusal") throw new AiError("refusal");
-  if (message.stop_reason === "max_tokens") throw new AiError("truncated");
   const rawText = message.content
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("");
-  const data = message.parsed_output;
-  if (data === null || data === undefined) throw new AiError("invalid-output", "no parsed output");
-  return {
-    data: data as T,
-    rawText,
-    model: message.model,
-    usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens },
+  const usage: TokenUsage = {
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
   };
+  const evidence = { rawText, usage };
+  // Why the model stopped comes first: neither a refusal nor a reply cut off
+  // at max_tokens has to match the schema, and neither is a format mistake.
+  if (message.stop_reason === "refusal") {
+    throw new AiError(
+      "refusal",
+      message.stop_details?.explanation ?? message.stop_details?.category ?? undefined,
+      undefined,
+      evidence,
+    );
+  }
+  if (message.stop_reason === "max_tokens") {
+    throw new AiError("truncated", `limit ${req.maxTokens ?? 2048} tokens`, undefined, evidence);
+  }
+  const data = parseStructured(req.schema, rawText, evidence);
+  return { data, rawText, model: message.model, usage };
 }

@@ -32,7 +32,7 @@ export interface AuditEntry {
   input: { system: string; user: string; schema: string };
   /** Validated structured output, or null on error. */
   output: unknown;
-  /** Raw model text, when there was any. */
+  /** Raw model text, when there was any (also kept when validation failed). */
   outputText: string | null;
   error: { kind: AiErrorKind; message: string } | null;
   latencyMs: number;
@@ -185,6 +185,7 @@ export function auditToCsv(entries: readonly AuditEntry[]): string {
     user_prompt: e.input.user,
     schema: e.input.schema,
     output: e.output === null || e.output === undefined ? null : JSON.stringify(e.output),
+    output_text: e.outputText,
     edited_output: e.editedOutput ?? null,
     context: e.context ? JSON.stringify(e.context) : null,
   }));
@@ -205,6 +206,7 @@ export function auditToCsv(entries: readonly AuditEntry[]): string {
     "user_prompt",
     "schema",
     "output",
+    "output_text",
     "edited_output",
     "context",
   ]);

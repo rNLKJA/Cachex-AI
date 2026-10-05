@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,9 +18,7 @@ import type { MoveExplanation } from "@/lib/agent/player";
 import { DECISION_LABEL, type HumanDecision } from "@/lib/ai/audit-log";
 import { callStructured } from "@/lib/ai/client";
 import {
-  type Commentary,
   CommentarySchema,
-  type GroundingResult,
   buildCommentaryFacts,
   commentaryPrompt,
   commentaryToText,
@@ -31,20 +29,12 @@ import type { Action, Colour } from "@/lib/cachex/types";
 import { cn } from "@/lib/utils";
 import { AiBadge } from "./ai-badge";
 import { useAi } from "./ai-provider";
-
-type State =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | {
-      status: "done";
-      commentary: Commentary;
-      grounding: GroundingResult;
-      entryId: string;
-      model: string;
-      decision: HumanDecision;
-      edited?: string;
-    };
+import {
+  IDLE,
+  getCommentaryState,
+  setCommentaryState,
+  subscribeCommentary,
+} from "./commentary-store";
 
 const FEATURE_LABEL: Record<string, string> = {
   empty: "Empty hexes",
@@ -57,7 +47,8 @@ const FEATURE_LABEL: Record<string, string> = {
 
 /**
  * "Explain in plain English": a bring-your-own-key commentary grounded in the
- * agent's own evaluation breakdown. Remount (key by move) to reset.
+ * agent's own evaluation breakdown. State lives in the commentary store, keyed
+ * by the facts, so a reply that arrives after the panel has moved on is kept.
  */
 export function CommentatorPanel({
   n,
@@ -65,21 +56,35 @@ export function CommentatorPanel({
   colour,
   action,
   explanation,
+  onExplainStart,
 }: {
   n: number;
   turn: number;
   colour: Colour;
   action: Action;
   explanation: Extract<MoveExplanation, { kind: "search" }>;
+  /** Called when the visitor asks for commentary (e.g. to pause autoplay). */
+  onExplainStart?: () => void;
 }) {
   const { credentials, ready, openSettings, audit } = useAi();
-  const [state, setState] = useState<State>({ status: "idle" });
+  const facts = useMemo(
+    () => buildCommentaryFacts({ n, turn, colour, action, explanation }),
+    [n, turn, colour, action, explanation],
+  );
+  const key = useMemo(() => JSON.stringify(facts), [facts]);
+  const state = useSyncExternalStore(
+    subscribeCommentary,
+    () => getCommentaryState(key),
+    () => IDLE,
+  );
+  const setState = (next: Parameters<typeof setCommentaryState>[1]) =>
+    setCommentaryState(key, next);
   const [editing, setEditing] = useState<string | null>(null);
 
   const run = async () => {
     if (!credentials) return openSettings();
+    onExplainStart?.();
     setState({ status: "loading" });
-    const facts = buildCommentaryFacts({ n, turn, colour, action, explanation });
     const prompt = commentaryPrompt(facts);
     try {
       const res = await callStructured(

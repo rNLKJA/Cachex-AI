@@ -1,17 +1,21 @@
 "use client";
 
-import { Download, RefreshCw, Trash2 } from "lucide-react";
+import { Check, Download, Pencil, RefreshCw, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Segmented } from "@/components/play/primitives";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   type AuditEntry,
+  type AuditStore,
   DECISION_LABEL,
+  type HumanDecision,
   auditToCsv,
   auditToJson,
   onAuditChange,
 } from "@/lib/ai/audit-log";
+import { CommentarySchema, commentaryToText } from "@/lib/ai/commentator";
 import { FEATURE_LABEL, PROVIDER_LABEL } from "@/lib/ai/types";
 import { downloadText } from "@/lib/download";
 import { cn } from "@/lib/utils";
@@ -185,16 +189,42 @@ export function AiLogClient() {
               </span>
             </div>
             {e.error ? (
-              <p className="text-destructive mt-2 text-sm">
-                Error ({e.error.kind}): {e.error.message}
-              </p>
+              <div className="mt-2 space-y-1">
+                <p className="text-destructive text-sm">
+                  Error ({e.error.kind}): {e.error.message}
+                </p>
+                {e.outputText && (
+                  <>
+                    <AiBadge />
+                    <p className="text-muted-foreground text-xs">
+                      Raw reply as received (it did not pass validation):
+                    </p>
+                    <pre
+                      role="region"
+                      aria-label="Raw reply"
+                      tabIndex={0}
+                      className="bg-background/60 focus-visible:ring-ring/50 max-h-48 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap outline-none focus-visible:ring-3"
+                    >
+                      {e.outputText}
+                    </pre>
+                  </>
+                )}
+              </div>
             ) : (
               <div className="mt-2 space-y-1">
                 <AiBadge />
-                <pre className="bg-background/60 max-h-48 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap">
+                <pre
+                  role="region"
+                  aria-label="AI output"
+                  tabIndex={0}
+                  className="bg-background/60 focus-visible:ring-ring/50 max-h-48 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap outline-none focus-visible:ring-3"
+                >
                   {JSON.stringify(e.output, null, 2)}
                 </pre>
               </div>
+            )}
+            {e.humanDecision === "pending" && !e.error && (
+              <ReviewControls entry={e} audit={audit} onDone={refresh} />
             )}
             {e.editedOutput !== undefined && (
               <div className="mt-2">
@@ -206,7 +236,12 @@ export function AiLogClient() {
               <summary className="text-muted-foreground cursor-pointer text-xs">
                 Exact input sent (system prompt, user prompt, schema)
               </summary>
-              <pre className="bg-background/60 mt-2 max-h-72 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap">
+              <pre
+                role="region"
+                aria-label="Exact input sent"
+                tabIndex={0}
+                className="bg-background/60 focus-visible:ring-ring/50 mt-2 max-h-72 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap outline-none focus-visible:ring-3"
+              >
                 {`SYSTEM\n${e.input.system}\n\nUSER\n${e.input.user}\n\nSCHEMA ${e.input.schema}`}
                 {e.context ? `\n\nCONTEXT ${JSON.stringify(e.context)}` : ""}
               </pre>
@@ -214,6 +249,72 @@ export function AiLogClient() {
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/**
+ * Review an entry that was never decided where it was generated (for example
+ * commentary that arrived after the visitor moved on). Same choices as the
+ * commentator panel; the decision is written back to the audit entry.
+ */
+function ReviewControls({
+  entry,
+  audit,
+  onDone,
+}: {
+  entry: AuditEntry;
+  audit: AuditStore;
+  onDone: () => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const decide = async (decision: HumanDecision, edited?: string) => {
+    await audit.update(entry.id, {
+      humanDecision: decision,
+      decidedAt: new Date().toISOString(),
+      ...(edited !== undefined ? { editedOutput: edited } : {}),
+    });
+    setEditing(null);
+    onDone();
+  };
+  const startEdit = () => {
+    const parsed = CommentarySchema.safeParse(entry.output);
+    setEditing(
+      parsed.success ? commentaryToText(parsed.data) : JSON.stringify(entry.output, null, 2),
+    );
+  };
+  if (editing !== null) {
+    return (
+      <div className="mt-2 space-y-2">
+        <Textarea
+          aria-label="Edit the AI output"
+          value={editing}
+          onChange={(ev) => setEditing(ev.target.value)}
+          rows={5}
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => decide("edited", editing)}>
+            Save edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <span className="text-muted-foreground text-xs">Not reviewed yet. Your review:</span>
+      <Button size="xs" variant="outline" onClick={() => decide("accepted")}>
+        <Check /> Accept
+      </Button>
+      <Button size="xs" variant="outline" onClick={startEdit}>
+        <Pencil /> Edit
+      </Button>
+      <Button size="xs" variant="outline" onClick={() => decide("rejected")}>
+        <X /> Reject
+      </Button>
     </div>
   );
 }

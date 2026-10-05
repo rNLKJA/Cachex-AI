@@ -29,11 +29,16 @@ import { maskKey } from "@/lib/ai/settings";
 import { PROVIDER_LABEL, type Provider } from "@/lib/ai/types";
 import { useAi } from "./ai-provider";
 
-export function AiSettingsDialog() {
+export function AiSettingsDialog({
+  onCloseAutoFocus,
+}: {
+  /** Returns focus to whatever opened the dialog. */
+  onCloseAutoFocus?: (event: Event) => void;
+}) {
   const { settingsOpen, setSettingsOpen } = useAi();
   return (
     <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
         {/* Remount the form each time the dialog opens so it starts from saved state. */}
         {settingsOpen && <SettingsForm onDone={() => setSettingsOpen(false)} />}
       </DialogContent>
@@ -42,7 +47,9 @@ export function AiSettingsDialog() {
 }
 
 function SettingsForm({ onDone }: { onDone: () => void }) {
-  const { prefs, setPrefs, storedKey, saveApiKey, forgetApiKey } = useAi();
+  const { prefs, setPrefs, storedKey, savedKeys, saveApiKey, forgetApiKeys } = useAi();
+  const otherSaved = (Object.keys(savedKeys) as Provider[]).filter((p) => p !== prefs.provider);
+  const anySaved = Object.keys(savedKeys).length > 0;
   const [draftKey, setDraftKey] = useState("");
   const [remember, setRemember] = useState(storedKey?.remembered ?? false);
   const [showKey, setShowKey] = useState(false);
@@ -168,7 +175,13 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
               ? storedKey.remembered
                 ? `A key (${maskKey(storedKey.key)}) is remembered on this device.`
                 : `A key (${maskKey(storedKey.key)}) is saved for this tab only.`
-              : "No key saved."}
+              : `No ${PROVIDER_LABEL[prefs.provider]} key saved.`}
+            {otherSaved.map((p) => (
+              <span key={p} className="block">
+                {PROVIDER_LABEL[p]}: a key ({maskKey(savedKeys[p]!.key)}) is also{" "}
+                {savedKeys[p]!.remembered ? "remembered on this device" : "saved for this tab"}.
+              </span>
+            ))}
           </p>
         </div>
 
@@ -190,16 +203,17 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <DialogFooter className="items-stretch sm:items-center">
-        {storedKey && (
+        {anySaved && (
           <Button
             variant="destructive"
             onClick={() => {
-              forgetApiKey();
+              forgetApiKeys();
               setDraftKey("");
+              setRemember(false);
             }}
             className="sm:mr-auto"
           >
-            <Trash2 /> Forget key
+            <Trash2 /> {Object.keys(savedKeys).length > 1 ? "Forget all keys" : "Forget key"}
           </Button>
         )}
         <Button variant="outline" asChild>
