@@ -5,3 +5,4 @@ src/lib/__fixtures__
 src/components/ui
 src/lib/agent/weights.json
 src/lib/data
+content/docs

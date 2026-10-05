@@ -28,6 +28,18 @@ export function SiteFooter() {
           <Link className="hover:text-foreground" href="/astar">
             A* Lab
           </Link>
+          <Link className="hover:text-foreground" href="/tournament">
+            Tournament
+          </Link>
+          <Link className="hover:text-foreground" href="/llm-arena">
+            LLM Arena
+          </Link>
+          <Link className="hover:text-foreground" href="/methods">
+            Methods &amp; decisions
+          </Link>
+          <Link className="hover:text-foreground" href="/ai-log">
+            AI audit log
+          </Link>
           <Link className="hover:text-foreground" href="/#about">
             About
           </Link>

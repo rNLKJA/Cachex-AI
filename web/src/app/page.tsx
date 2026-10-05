@@ -1,4 +1,15 @@
-import { ArrowRight, Bot, BrainCircuit, GitBranch, Route, Swords } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  BrainCircuit,
+  FlaskConical,
+  GitBranch,
+  NotebookPen,
+  Route,
+  Sparkles,
+  Swords,
+  Trophy,
+} from "lucide-react";
 import Link from "next/link";
 
 import { HexBoard } from "@/components/board/hex-board";
@@ -11,6 +22,8 @@ import { TARGET_RATES } from "@/lib/agent/player";
 import { deterministicSelfPlay } from "@/lib/agent/self-play";
 import benchmark from "@/lib/data/agent-benchmark.json";
 import { SITE } from "@/lib/site";
+import { formatPct } from "@/lib/stats/format";
+import { wilson } from "@/lib/stats/proportion";
 
 export default function HomePage() {
   const { game } = deterministicSelfPlay(7);
@@ -25,6 +38,7 @@ export default function HomePage() {
     { wins: 0, games: 0 },
   );
   const winRate = Math.round((totals.wins / totals.games) * 100);
+  const winCI = wilson(totals.wins, totals.games);
 
   return (
     <div className="table-felt">
@@ -285,7 +299,7 @@ export default function HomePage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <BigStat
                 value={`${winRate}%`}
-                label={`wins against the random agent (${totals.wins} of ${totals.games} games, both colours, n = 4–7)`}
+                label={`wins against the random agent (${totals.wins} of ${totals.games} games, both colours, n = 4–7; Wilson 95% CI ${formatPct(winCI.lower)} to ${formatPct(winCI.upper)})`}
               />
               <BigStat
                 value="8 & 13"
@@ -364,6 +378,45 @@ export default function HomePage() {
               </table>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Evaluation */}
+      <section aria-labelledby="evaluation" className="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
+        <SectionHeading
+          id="evaluation"
+          eyebrow="Measured, not claimed"
+          title="How good is it, really?"
+        >
+          The revival adds a seeded tournament harness, a paired A* study and an optional LLM
+          evaluation, each reported with sample sizes and confidence intervals, plus the decisions
+          and weaknesses behind them.
+        </SectionHeading>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <EvalCard
+            href="/tournament"
+            icon={Trophy}
+            title="Tournament"
+            body="Round robin against controlled variants, colour-swapped and seeded, with Bradley-Terry strengths and the alpha-beta study."
+          />
+          <EvalCard
+            href="/astar#paired-study"
+            icon={FlaskConical}
+            title="A* heuristic study"
+            body="Manhattan vs Euclidean on 980 paired boards: expansions, Wilcoxon test, and how often each finds a shortest path."
+          />
+          <EvalCard
+            href="/llm-arena"
+            icon={Sparkles}
+            title="LLM Arena"
+            body="Bring your own key: a language model plays the agent, with legal-move validation, intervals and an audit log."
+          />
+          <EvalCard
+            href="/methods"
+            icon={NotebookPen}
+            title="Methods & decisions"
+            body="Provenance, evaluation design, limitations, decision records, the agent card and the AI use statement."
+          />
         </div>
       </section>
 
@@ -490,6 +543,32 @@ function RuleCard({
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="text-muted-foreground mt-1 text-sm">{body}</p>
     </article>
+  );
+}
+
+function EvalCard({
+  href,
+  icon: Icon,
+  title,
+  body,
+}: {
+  href: string;
+  icon: typeof Trophy;
+  title: string;
+  body: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-card/60 hover:bg-card group flex flex-col rounded-3xl border p-5 transition-colors"
+    >
+      <Icon className="text-gold size-5" aria-hidden />
+      <h3 className="mt-3 font-semibold">{title}</h3>
+      <p className="text-muted-foreground mt-1 text-sm">{body}</p>
+      <span className="text-muted-foreground group-hover:text-foreground mt-auto flex items-center gap-1 pt-4 text-sm">
+        Open <ArrowRight className="size-4" />
+      </span>
+    </Link>
   );
 }
 
