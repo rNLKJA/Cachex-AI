@@ -2,6 +2,7 @@
 
 import { BookOpen, Dice5, Sparkles, Trophy } from "lucide-react";
 
+import { CommentatorPanel } from "@/components/ai/commentator-panel";
 import type { MoveMeta } from "@/hooks/use-cachex-match";
 import type { Action, Colour } from "@/lib/cachex/types";
 import { sameAction } from "@/lib/cachex/types";
@@ -23,11 +24,14 @@ export function ExplainPanel({
   action,
   colour,
   turn,
+  n,
 }: {
   meta: MoveMeta | undefined;
   action: Action | undefined;
   colour: Colour | undefined;
   turn: number | undefined;
+  /** Board size; enables the optional AI commentary for searched moves. */
+  n?: number;
 }) {
   if (!meta || !action || !colour) {
     return (
@@ -157,7 +161,7 @@ export function ExplainPanel({
         <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
           Evaluation after this move
         </h3>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full text-xs">
             <caption className="sr-only">
               Evaluation features and their weighted contribution
@@ -221,6 +225,17 @@ export function ExplainPanel({
             " With alpha-beta pruning, scores other than the chosen move can be bounds rather than exact values."}
         </p>
       </div>
+
+      {n !== undefined && turn !== undefined && (
+        <CommentatorPanel
+          key={`${n}-${turn}-${actionLabel(action)}`}
+          n={n}
+          turn={turn}
+          colour={colour}
+          action={action}
+          explanation={explanation}
+        />
+      )}
     </div>
   );
 }

@@ -189,6 +189,7 @@ export function SpectateClient() {
                 action={shown !== undefined ? match.actions[shown] : undefined}
                 colour={shown !== undefined ? (shown % 2 === 0 ? "red" : "blue") : undefined}
                 turn={shown !== undefined ? shown + 1 : undefined}
+                n={n}
               />
             </Panel>
 

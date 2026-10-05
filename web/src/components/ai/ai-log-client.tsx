@@ -1,0 +1,228 @@
+"use client";
+
+import { Download, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { Segmented } from "@/components/play/primitives";
+import { Button } from "@/components/ui/button";
+import {
+  type AuditEntry,
+  DECISION_LABEL,
+  auditToCsv,
+  auditToJson,
+  onAuditChange,
+} from "@/lib/ai/audit-log";
+import { FEATURE_LABEL, PROVIDER_LABEL } from "@/lib/ai/types";
+import { downloadText } from "@/lib/download";
+import { cn } from "@/lib/utils";
+import { AiBadge } from "./ai-badge";
+import { useAi } from "./ai-provider";
+
+type Filter = "all" | "commentator" | "llm-player";
+
+export function AiLogClient() {
+  const { audit } = useAi();
+  const [entries, setEntries] = useState<AuditEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const refresh = useCallback(() => {
+    audit
+      .list()
+      .then((list) => {
+        setEntries(list);
+        setError(null);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+  }, [audit]);
+
+  useEffect(() => {
+    // Subscribe first, then load: both callbacks set state asynchronously.
+    const unsubscribe = onAuditChange(refresh);
+    const timer = setTimeout(refresh, 0);
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [refresh]);
+
+  const shown = useMemo(
+    () => (entries ?? []).filter((e) => filter === "all" || e.feature === filter),
+    [entries, filter],
+  );
+
+  const stats = useMemo(() => {
+    const list = entries ?? [];
+    const reviewed = list.filter((e) =>
+      ["accepted", "edited", "rejected"].includes(e.humanDecision),
+    );
+    return {
+      calls: list.length,
+      errors: list.filter((e) => e.error).length,
+      reviewed: reviewed.length,
+      accepted: reviewed.filter((e) => e.humanDecision === "accepted").length,
+      edited: reviewed.filter((e) => e.humanDecision === "edited").length,
+      rejected: reviewed.filter((e) => e.humanDecision === "rejected").length,
+    };
+  }, [entries]);
+
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-full max-w-md">
+          <Segmented
+            label="Filter by feature"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "All" },
+              { value: "commentator", label: "Commentator" },
+              { value: "llm-player", label: "LLM player" },
+            ]}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <Button size="sm" variant="outline" onClick={refresh}>
+            <RefreshCw /> Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!shown.length}
+            onClick={() =>
+              downloadText(`cachex-ai-audit-${stamp}.json`, auditToJson(shown), "application/json")
+            }
+          >
+            <Download /> JSON
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!shown.length}
+            onClick={() => downloadText(`cachex-ai-audit-${stamp}.csv`, auditToCsv(shown))}
+          >
+            <Download /> CSV
+          </Button>
+          {confirmClear ? (
+            <>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={async () => {
+                  await audit.clear();
+                  setConfirmClear(false);
+                  refresh();
+                }}
+              >
+                Yes, clear the log
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmClear(false)}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!entries?.length}
+              onClick={() => setConfirmClear(true)}
+            >
+              <Trash2 /> Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Calls logged" value={stats.calls} />
+        <Stat label="Errors" value={stats.errors} />
+        <Stat label="Reviewed by you" value={stats.reviewed} />
+        <Stat
+          label="Accepted · edited · rejected"
+          value={`${stats.accepted} · ${stats.edited} · ${stats.rejected}`}
+        />
+      </dl>
+
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          Could not read the log: {error}
+        </p>
+      )}
+      {entries === null && !error && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {entries !== null && shown.length === 0 && (
+        <div className="text-muted-foreground rounded-2xl border border-dashed p-8 text-center text-sm">
+          No AI calls recorded in this browser yet. Use the commentator on /play or /spectate, or
+          run the LLM Arena, with your own key.
+        </div>
+      )}
+
+      <ol className="space-y-3">
+        {shown.map((e) => (
+          <li key={e.id} className="bg-card/60 rounded-2xl border p-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="font-medium">{FEATURE_LABEL[e.feature]}</span>
+              <span className="text-muted-foreground font-mono text-xs">
+                {new Date(e.timestamp).toLocaleString("en-AU")}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                {PROVIDER_LABEL[e.provider]} · <span className="font-mono">{e.model}</span>
+              </span>
+              <span className="text-muted-foreground font-mono text-xs">
+                {Math.round(e.latencyMs).toLocaleString("en-AU")} ms
+                {e.usage ? ` · ${e.usage.inputTokens} in / ${e.usage.outputTokens} out tokens` : ""}
+              </span>
+              <span
+                className={cn(
+                  "ml-auto rounded-full border px-2 py-0.5 text-xs",
+                  e.humanDecision === "rejected" && "border-destructive/40 text-destructive",
+                  e.humanDecision === "accepted" && "border-gold/50",
+                )}
+              >
+                {DECISION_LABEL[e.humanDecision]}
+              </span>
+            </div>
+            {e.error ? (
+              <p className="text-destructive mt-2 text-sm">
+                Error ({e.error.kind}): {e.error.message}
+              </p>
+            ) : (
+              <div className="mt-2 space-y-1">
+                <AiBadge />
+                <pre className="bg-background/60 max-h-48 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap">
+                  {JSON.stringify(e.output, null, 2)}
+                </pre>
+              </div>
+            )}
+            {e.editedOutput !== undefined && (
+              <div className="mt-2">
+                <p className="text-muted-foreground text-xs">Human-edited version</p>
+                <p className="text-sm whitespace-pre-line">{e.editedOutput}</p>
+              </div>
+            )}
+            <details className="mt-2">
+              <summary className="text-muted-foreground cursor-pointer text-xs">
+                Exact input sent (system prompt, user prompt, schema)
+              </summary>
+              <pre className="bg-background/60 mt-2 max-h-72 overflow-auto rounded-lg border p-2 font-mono text-xs whitespace-pre-wrap">
+                {`SYSTEM\n${e.input.system}\n\nUSER\n${e.input.user}\n\nSCHEMA ${e.input.schema}`}
+                {e.context ? `\n\nCONTEXT ${JSON.stringify(e.context)}` : ""}
+              </pre>
+            </details>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-background/50 rounded-xl border p-3">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="mt-0.5 font-mono text-lg tabular-nums">{value}</dd>
+    </div>
+  );
+}

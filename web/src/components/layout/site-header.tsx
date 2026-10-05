@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
+import { AiSettingsButton } from "@/components/ai/ai-settings-button";
 import { NAV, SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { GitHubIcon } from "./github-icon";
@@ -11,6 +13,21 @@ import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  // On narrow screens the nav scrolls sideways: keep the current page's link visible.
+  useEffect(() => {
+    const nav = navRef.current;
+    const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && active) {
+      const n = nav.getBoundingClientRect();
+      const a = active.getBoundingClientRect();
+      if (a.left < n.left || a.right > n.right) {
+        nav.scrollLeft += a.left - n.left - (n.width - a.width) / 2;
+      }
+    }
+  }, [pathname]);
+
   return (
     <header className="border-border/70 bg-background/75 sticky top-0 z-40 border-b backdrop-blur-xl">
       <a
@@ -31,11 +48,12 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav
+          ref={navRef}
           aria-label="Main"
-          className="ml-auto flex min-w-0 items-center gap-0 overflow-x-auto sm:ml-6 sm:gap-0.5"
+          className="ml-auto flex min-w-0 [scrollbar-width:none] items-center gap-0 overflow-x-auto max-md:[mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] sm:ml-6 sm:gap-0.5"
         >
           {NAV.map((item) => {
-            const active = item.href === "/#about" ? false : pathname.startsWith(item.href);
+            const active = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -61,6 +79,7 @@ export function SiteHeader() {
           >
             <GitHubIcon className="size-4" />
           </a>
+          <AiSettingsButton />
           <ThemeToggle />
         </div>
       </div>
