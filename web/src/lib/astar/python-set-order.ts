@@ -134,22 +134,40 @@ class PySetSimulator {
   }
 }
 
-const cache = new Map<string, Coord[]>();
+/** Per-board-size cache of neighbour orders (only a few sizes are kept). */
+const cache = new Map<number, (Coord[] | undefined)[]>();
+const MAX_CACHED_SIZES = 4;
+const hashCache = new Map<string, bigint>();
+
+function cellHash(a: number, b: number): bigint {
+  const key = `${a},${b}`;
+  let h = hashCache.get(key);
+  if (h === undefined) {
+    h = pythonTupleHash([a, b]);
+    hashCache.set(key, h);
+  }
+  return h;
+}
 
 /**
  * `HexNode.find_next_moves` for cell (r, q) on an n×n board, returned in the
  * order CPython iterates the resulting set.
  */
 export function pythonNeighbourOrder(n: number, r: number, q: number): Coord[] {
-  const cacheKey = `${n}:${r}:${q}`;
-  const hit = cache.get(cacheKey);
+  let perSize = cache.get(n);
+  if (!perSize) {
+    perSize = new Array(n * n);
+    cache.set(n, perSize);
+    if (cache.size > MAX_CACHED_SIZES) cache.delete(cache.keys().next().value!);
+  }
+  const hit = perSize[r * n + q];
   if (hit) return hit;
 
   const set = new PySetSimulator();
   const inBoard = (a: number, b: number) => a >= 0 && a < n && b >= 0 && b < n;
   for (let a = r - 1; a < r + 2; a++) {
     for (let b = q - 1; b < q + 2; b++) {
-      if (inBoard(a, b)) set.add(`${a},${b}`, pythonTupleHash([a, b]));
+      if (inBoard(a, b)) set.add(`${a},${b}`, cellHash(a, b));
     }
   }
   // remove the two diagonal cells along the major axis, and the cell itself
@@ -158,6 +176,6 @@ export function pythonNeighbourOrder(n: number, r: number, q: number): Coord[] {
   set.discard(`${r},${q}`);
 
   const order = set.keys().map((k) => k.split(",").map(Number) as unknown as Coord);
-  cache.set(cacheKey, order);
+  perSize[r * n + q] = order;
   return order;
 }

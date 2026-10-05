@@ -15,9 +15,17 @@ describe("referee parity (seeded random games from the original referee)", () =>
       game.update(game.turnPlayer(), action);
       const step = g.steps[i];
       expect(game.board.digest(), `turn ${i + 1}`).toBe(step.board);
-      const captures = action[0] === "STEAL" ? [] : [...game.lastCaptures].map((c) => [...c]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const captures =
+        action[0] === "STEAL"
+          ? []
+          : [...game.lastCaptures].map((c) => [...c]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
       expect(captures, `captures on turn ${i + 1}`).toEqual(step.captures);
-      const result = game.result === null ? null : game.result.kind === "win" ? `winner: ${game.result.winner}` : "draw";
+      const result =
+        game.result === null
+          ? null
+          : game.result.kind === "win"
+            ? `winner: ${game.result.winner}`
+            : "draw";
       expect(result).toBe(step.result);
     });
   });
@@ -25,7 +33,9 @@ describe("referee parity (seeded random games from the original referee)", () =>
   it("the fixtures exercise captures, steals and wins for both colours", () => {
     const steps = fixtures.refereeGames.flatMap((g) => g.steps);
     expect(steps.filter((s) => s.captures.length > 0).length).toBeGreaterThan(20);
-    expect(fixtures.refereeGames.filter((g) => g.actions[1]?.[0] === "STEAL").length).toBeGreaterThan(3);
+    expect(
+      fixtures.refereeGames.filter((g) => g.actions[1]?.[0] === "STEAL").length,
+    ).toBeGreaterThan(3);
     const results = new Set(steps.map((s) => s.result).filter(Boolean));
     expect(results).toEqual(new Set(["winner: red", "winner: blue"]));
   });
@@ -91,7 +101,13 @@ describe("game rules", () => {
   });
 
   it("detects a Red win along the r axis", () => {
-    const g = Game.fromActions(3, [place(0, 0), place(0, 1), place(1, 0), place(1, 1), place(2, 0)]);
+    const g = Game.fromActions(3, [
+      place(0, 0),
+      place(0, 1),
+      place(1, 0),
+      place(1, 1),
+      place(2, 0),
+    ]);
     expect(g.result).toMatchObject({ kind: "win", winner: "red" });
   });
 

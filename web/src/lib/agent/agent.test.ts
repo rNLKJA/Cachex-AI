@@ -18,10 +18,10 @@ const fixtures = partB();
 
 describe("weights", () => {
   it("is a verbatim copy of the original utility/weights.json", () => {
-    const original = JSON.parse(
-      readFileSync(new URL("../../../../coursework/Project Part B/code/utility/weights.json", import.meta.url), "utf8"),
-    );
-    expect(weights).toEqual(original);
+    const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+    const original = read("../../../../coursework/Project Part B/code/utility/weights.json");
+    expect(read("./weights.json")).toBe(original);
+    expect(weights).toEqual(JSON.parse(original));
   });
 });
 
@@ -39,7 +39,10 @@ describe("evaluation feature parity", () => {
     const expected = p.features;
     expect(f.empty).toBe(expected.empty);
     for (const key of ["triangle", "tokens", "location", "diamond", "weakness"] as const) {
-      expect(f[key], key).toEqual({ red: fromPy(expected[key].red), blue: fromPy(expected[key].blue) });
+      expect(f[key], key).toEqual({
+        red: fromPy(expected[key].red),
+        blue: fromPy(expected[key].blue),
+      });
     }
     expect(scoreFeatures(f)).toBe(fromPy(p.eval));
     expect(evaluate(board)).toBe(fromPy(p.eval));
@@ -50,7 +53,14 @@ describe("minimax parity (canonical move order, no bias)", () => {
   it.each(fixtures.minimax.map((m, i) => [i, m] as const))("case %i", (_, m) => {
     const { n, actions } = position(fixtures, m);
     const board = AgentBoard.fromActions(n, actions);
-    const [score, action] = minimax(board, m.depth, -Infinity, Infinity, m.maximizing, createContext());
+    const [score, action] = minimax(
+      board,
+      m.depth,
+      -Infinity,
+      Infinity,
+      m.maximizing,
+      createContext(),
+    );
     expect(score).toBe(fromPy(m.score));
     expect(action).toEqual(m.action === null ? null : toAction(m.action));
   });
@@ -69,7 +79,11 @@ describe("Player.action parity", () => {
       const game = new Game(n);
       const expected = g.actions.map(toAction);
       for (const want of expected) {
-        const { action } = chooseAgentAction(n, game.log.map((t) => t.action), game.turnPlayer());
+        const { action } = chooseAgentAction(
+          n,
+          game.log.map((t) => t.action),
+          game.turnPlayer(),
+        );
         expect(action).toEqual(want);
         game.update(game.turnPlayer(), action);
       }
@@ -105,9 +119,13 @@ describe("agent behaviour", () => {
   });
 
   it("explains searched moves with root candidates and a feature breakdown", () => {
-    const decision = agentAction(AgentBoard.fromActions(5, [place(1, 1), place(3, 3), place(0, 4)]), "blue", {
-      order: createRng(1),
-    });
+    const decision = agentAction(
+      AgentBoard.fromActions(5, [place(1, 1), place(3, 3), place(0, 4)]),
+      "blue",
+      {
+        order: createRng(1),
+      },
+    );
     expect(decision.explanation.kind).toBe("search");
     if (decision.explanation.kind === "search") {
       expect(decision.explanation.candidates.length).toBe(22);
@@ -129,10 +147,24 @@ describe("random agent", () => {
     for (let trial = 0; trial < 20; trial++) {
       const game = new Game(5);
       while (!game.over()) {
-        const { action } = chooseRandomAction(5, game.log.map((t) => t.action), rng);
+        const { action } = chooseRandomAction(
+          5,
+          game.log.map((t) => t.action),
+          rng,
+        );
         expect(game.isLegal(action)).toBe(true);
         game.update(game.turnPlayer(), action);
       }
     }
+  });
+});
+
+describe("deterministicSelfPlay", () => {
+  it("reproduces the original self-play game on 7×7", async () => {
+    const { deterministicSelfPlay } = await import("./self-play");
+    const expected = fixtures.agentGames.find((g) => g.n === 7)!;
+    const { actions, game } = deterministicSelfPlay(7);
+    expect(actions).toEqual(expected.actions.map(toAction));
+    expect(game.result?.kind === "win" && game.result.winner).toBe("red");
   });
 });

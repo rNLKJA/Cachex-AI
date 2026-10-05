@@ -29,7 +29,8 @@ export function chooseRandomAction(n: number, history: readonly Action[], rng: R
     }
   }
   const centre = Math.floor(n / 2);
-  const legal = n % 2 === 1 && turn === 1 ? moves.filter(([r, q]) => r !== centre || q !== centre) : moves;
+  const legal =
+    n % 2 === 1 && turn === 1 ? moves.filter(([r, q]) => r !== centre || q !== centre) : moves;
   const [r, q] = choice(rng, legal);
   return { action: place(r, q), explanation: { kind: "random", options: legal.length } };
 }

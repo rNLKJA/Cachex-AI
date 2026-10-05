@@ -23,7 +23,10 @@ export interface SearchContext {
   rootScores?: { action: Action; score: number }[];
 }
 
-export const createContext = (order: MoveOrder = "canonical", bias: BiasFn = noBias): SearchContext => ({
+export const createContext = (
+  order: MoveOrder = "canonical",
+  bias: BiasFn = noBias,
+): SearchContext => ({
   order,
   bias,
   nodes: 0,

@@ -27,16 +27,24 @@ export function parsePartAInput(text: string): AStarBoard {
   if (typeof raw !== "object" || raw === null) throw new AStarInputError("Expected a JSON object.");
   const data = raw as Record<string, unknown>;
   if (!isInt(data.n) || data.n < 1) throw new AStarInputError('"n" must be a positive integer.');
-  if (data.n > 30) throw new AStarInputError("Boards larger than 30 × 30 are not supported in the lab.");
+  if (data.n > 30)
+    throw new AStarInputError("Boards larger than 30 × 30 are not supported in the lab.");
   if (!isPair(data.start)) throw new AStarInputError('"start" must be a pair [r, q].');
   if (!isPair(data.goal)) throw new AStarInputError('"goal" must be a pair [r, q].');
   const n = data.n;
   const board = data.board ?? [];
-  if (!Array.isArray(board)) throw new AStarInputError('"board" must be a list of [colour, r, q] entries.');
+  if (!Array.isArray(board))
+    throw new AStarInputError('"board" must be a list of [colour, r, q] entries.');
 
   const cells: CellState[] = new Array(n * n).fill(null);
   for (const entry of board) {
-    if (!Array.isArray(entry) || entry.length !== 3 || typeof entry[0] !== "string" || !isInt(entry[1]) || !isInt(entry[2])) {
+    if (
+      !Array.isArray(entry) ||
+      entry.length !== 3 ||
+      typeof entry[0] !== "string" ||
+      !isInt(entry[1]) ||
+      !isInt(entry[2])
+    ) {
       throw new AStarInputError('Each board entry must look like ["b", r, q].');
     }
     const [colour, r, q] = entry as [string, number, number];
@@ -54,7 +62,8 @@ export function parsePartAInput(text: string): AStarBoard {
 export function toPartAInput(board: AStarBoard): PartAInput {
   const entries: [string, number, number][] = [];
   board.cells.forEach((cell, i) => {
-    if (cell !== null) entries.push([cell === "red" ? "r" : "b", Math.floor(i / board.n), i % board.n]);
+    if (cell !== null)
+      entries.push([cell === "red" ? "r" : "b", Math.floor(i / board.n), i % board.n]);
   });
   return {
     n: board.n,

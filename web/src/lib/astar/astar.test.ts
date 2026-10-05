@@ -29,16 +29,15 @@ describe("CPython set-order simulation", () => {
 });
 
 describe("A* parity with the original CachexBoard.AStar", () => {
-  it.each(fixtures.cases.map((c, i) => [`${c.name} ${c.heuristic} block=${c.block} #${i}`, c] as const))(
-    "%s",
-    (_, c) => {
-      const board = parsePartAInput(JSON.stringify(c.input));
-      const result = astar(board, c.heuristic, blockOf(c.block));
-      expect(result.path).toEqual(c.path);
-      expect(result.pops).toBe(c.pops);
-      expect(result.pushes).toBe(c.pushes);
-    },
-  );
+  it.each(
+    fixtures.cases.map((c, i) => [`${c.name} ${c.heuristic} block=${c.block} #${i}`, c] as const),
+  )("%s", (_, c) => {
+    const board = parsePartAInput(JSON.stringify(c.input));
+    const result = astar(board, c.heuristic, blockOf(c.block));
+    expect(result.path).toEqual(c.path);
+    expect(result.pops).toBe(c.pops);
+    expect(result.pushes).toBe(c.pushes);
+  });
 
   it("covers reachable and unreachable goals", () => {
     expect(fixtures.cases.some((c) => c.path.length === 0)).toBe(true);
@@ -55,10 +54,16 @@ describe("original recorded outputs", () => {
     );
   });
 
-  it.each(PRESETS.map((p) => [p.label, p] as const))("%s matches the recorded path", (_, preset) => {
-    const result = astar(parsePartAInput(JSON.stringify(preset.input)), preset.originalHeuristic ?? "euclidean");
-    expect(result.path).toEqual(preset.originalPath ?? []);
-  });
+  it.each(PRESETS.map((p) => [p.label, p] as const))(
+    "%s matches the recorded path",
+    (_, preset) => {
+      const result = astar(
+        parsePartAInput(JSON.stringify(preset.input)),
+        preset.originalHeuristic ?? "euclidean",
+      );
+      expect(result.path).toEqual(preset.originalPath ?? []);
+    },
+  );
 });
 
 describe("heuristics", () => {
@@ -78,13 +83,15 @@ describe("input format", () => {
   it("rejects malformed input with a helpful message", () => {
     expect(() => parsePartAInput("{")).toThrow(AStarInputError);
     expect(() => parsePartAInput('{"n": 3, "start": [0, 0]}')).toThrow(/goal/);
-    expect(() => parsePartAInput('{"n": 3, "board": [["b", 5, 0]], "start": [0,0], "goal": [1,1]}')).toThrow(
-      /outside/,
-    );
+    expect(() =>
+      parsePartAInput('{"n": 3, "board": [["b", 5, 0]], "start": [0,0], "goal": [1,1]}'),
+    ).toThrow(/outside/);
   });
 
   it("refuses an occupied start when every tile blocks (KeyError in the original)", () => {
-    const board = parsePartAInput('{"n": 3, "board": [["r", 0, 0]], "start": [0, 0], "goal": [2, 2]}');
+    const board = parsePartAInput(
+      '{"n": 3, "board": [["r", 0, 0]], "start": [0, 0], "goal": [2, 2]}',
+    );
     expect(() => astar(board, "manhattan", null)).toThrow(AStarInputError);
     expect(astar(board, "manhattan", "blue").path.length).toBeGreaterThan(0);
   });

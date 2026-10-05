@@ -8,7 +8,13 @@
  */
 import { type Action, type Colour, STEAL, isSteal, place } from "@/lib/cachex/types";
 import { AgentBoard } from "./agent-board";
-import { type BiasFn, type FeatureContribution, computeFeatures, explainFeatures, noBias } from "./evaluation";
+import {
+  type BiasFn,
+  type FeatureContribution,
+  computeFeatures,
+  explainFeatures,
+  noBias,
+} from "./evaluation";
 import { type MoveOrder, createContext, gameEnd, getValidActions, minimax } from "./minimax";
 
 /** Empty-cell ratios at which the search deepens (index + 1 = depth). */
@@ -24,12 +30,17 @@ export function dynamicDepthAllocation(board: AgentBoard): number {
 }
 
 /** `enforced_gamestart_play` — the hand-written opening book. */
-export function enforcedGamestartPlay(n: number, player: Colour, board: AgentBoard): { action: Action; rule: string } {
+export function enforcedGamestartPlay(
+  n: number,
+  player: Colour,
+  board: AgentBoard,
+): { action: Action; rule: string } {
   if (n === 3) {
     if (player === "blue" && board.isOccupied(0, 1)) {
       return { action: STEAL, rule: "On a 3×3 board Blue steals Red's opening at (0, 1)." };
     }
-    if (player === "red") return { action: place(1, 0), rule: "On a 3×3 board Red opens at (1, 0)." };
+    if (player === "red")
+      return { action: place(1, 0), rule: "On a 3×3 board Red opens at (1, 0)." };
     return { action: place(0, 1), rule: "On a 3×3 board Blue takes (0, 1)." };
   }
   if (player === "blue" && board.isOccupied(1, 1)) {
@@ -80,7 +91,11 @@ export function chooseAgentAction(
   return agentAction(board, colour, options);
 }
 
-export function agentAction(board: AgentBoard, colour: Colour, options: AgentOptions = {}): AgentDecision {
+export function agentAction(
+  board: AgentBoard,
+  colour: Colour,
+  options: AgentOptions = {},
+): AgentDecision {
   const { order = "canonical", bias = noBias, enforceGamePlay = true } = options;
 
   if (board.turn <= 2 && enforceGamePlay) {

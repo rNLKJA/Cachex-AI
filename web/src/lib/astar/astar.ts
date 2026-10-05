@@ -69,11 +69,17 @@ export function validateBoard(board: AStarBoard): void {
   if (cells.length !== n * n) throw new AStarInputError("cells must have n × n entries");
   // The original only checks the upper bound (InvalidStartError / InvalidGoalError).
   const inside = ([r, q]: Coord) => r >= 0 && q >= 0 && r < n && q < n;
-  if (!inside(start)) throw new AStarInputError("Current start point out of board existing board dimension.");
-  if (!inside(goal)) throw new AStarInputError("Current goal point out of board existing board dimension.");
+  if (!inside(start))
+    throw new AStarInputError("Current start point out of board existing board dimension.");
+  if (!inside(goal))
+    throw new AStarInputError("Current goal point out of board existing board dimension.");
 }
 
-export function astar(board: AStarBoard, heuristic: Heuristic, block: BlockMode = null): AStarResult {
+export function astar(
+  board: AStarBoard,
+  heuristic: Heuristic,
+  block: BlockMode = null,
+): AStarResult {
   validateBoard(board);
   const { n, cells, start, goal } = board;
   const id = (c: Coord) => c[0] * n + c[1];
@@ -111,7 +117,13 @@ export function astar(board: AStarBoard, heuristic: Heuristic, block: BlockMode 
     pops++;
     const current = item.value;
     tracker.delete(current);
-    const step: AStarStep = { node: coordOf(current), g: g[current], f: item.f, pushed: [], improved: [] };
+    const step: AStarStep = {
+      node: coordOf(current),
+      g: g[current],
+      f: item.f,
+      pushed: [],
+      improved: [],
+    };
     steps.push(step);
 
     if (current === goalId) {
