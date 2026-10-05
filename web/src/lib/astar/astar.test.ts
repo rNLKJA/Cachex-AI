@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { partA } from "@/lib/__fixtures__/load";
@@ -45,8 +48,39 @@ describe("A* parity with the original CachexBoard.AStar", () => {
   });
 });
 
+const CODE_DIR = fileURLToPath(
+  new URL("../../../../coursework/Project Part A/code/", import.meta.url),
+);
+
+/** Parse a recorded sample_output*.txt: a length line, then "(r, q)" per line. */
+function readRecordedOutput(file: string) {
+  const [count, ...lines] = readFileSync(resolve(CODE_DIR, file), "utf8").trim().split(/\r?\n/);
+  const path = lines.map((l) => {
+    const m = /^\((\d+),\s*(\d+)\)$/.exec(l.trim());
+    if (!m) throw new Error(`unexpected line in ${file}: ${l}`);
+    return [Number(m[1]), Number(m[2])];
+  });
+  expect(path).toHaveLength(Number(count));
+  return path;
+}
+
 describe("original recorded outputs", () => {
-  it("sample_input.json → sample_output.txt (8 cells)", () => {
+  it.each([
+    ["sample_input.json", "sample_output.txt", "sample-1"],
+    ["sample_input2.json", "sample_output2.txt", "sample-2"],
+  ])("%s → %s, read from coursework/, for both heuristics", (input, output, presetId) => {
+    const recorded = readRecordedOutput(output);
+    const board = parsePartAInput(readFileSync(resolve(CODE_DIR, input), "utf8"));
+    const preset = PRESETS.find((p) => p.id === presetId)!;
+    expect(parsePartAInput(JSON.stringify(preset.input))).toEqual(board);
+    expect(preset.originalPath).toEqual(recorded);
+    expect(preset.originalHeuristic).toBe("manhattan");
+    for (const heuristic of ["manhattan", "euclidean"] as const) {
+      expect(astar(board, heuristic).path, heuristic).toEqual(recorded);
+    }
+  });
+
+  it("CLI output format (search/main.py) for sample_input.json", () => {
     const preset = PRESETS.find((p) => p.id === "sample-1")!;
     const result = astar(parsePartAInput(JSON.stringify(preset.input)), "euclidean");
     expect(formatCliOutput(result.path)).toBe(

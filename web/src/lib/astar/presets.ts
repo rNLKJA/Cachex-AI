@@ -31,6 +31,7 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "sample-1",
     label: "Sample input 1",
+    // sample_output.txt was written by notebook cell 5 with heuristic="manhattan".
     source: "code/sample_input.json → sample_output.txt",
     input: { n: 5, board: BASE, start: [4, 2], goal: [0, 0] },
     originalPath: c([
@@ -43,11 +44,12 @@ export const PRESETS: readonly Preset[] = [
       [0, 1],
       [0, 0],
     ]),
-    originalHeuristic: "euclidean",
+    originalHeuristic: "manhattan",
   },
   {
     id: "sample-2",
     label: "Sample input 2",
+    // sample_output2.txt matches notebook cell 14, which also uses "manhattan".
     source: "code/sample_input2.json → sample_output2.txt",
     input: {
       n: 5,
@@ -79,7 +81,7 @@ export const PRESETS: readonly Preset[] = [
       [0, 1],
       [0, 0],
     ]),
-    originalHeuristic: "euclidean",
+    originalHeuristic: "manhattan",
   },
   {
     id: "notebook-short",

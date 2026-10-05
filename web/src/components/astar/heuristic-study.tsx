@@ -4,10 +4,14 @@ import { FlaskConical, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAstarBenchmark } from "@/hooks/use-astar-benchmark";
+import { useElementWidth } from "@/hooks/use-element-width";
 import type { BenchmarkRow } from "@/lib/astar/random-board";
 import { randomSeed } from "@/lib/rng";
 
-const DIMENSIONS = Array.from({ length: 50 }, (_, i) => 2 + i * 2);
+// The notebook looped `for i in range(100)`, skipping i < 2: every size from 2 to 99.
+const DIMENSIONS = Array.from({ length: 98 }, (_, i) => i + 2);
+const FIRST = DIMENSIONS[0];
+const LAST = DIMENSIONS.at(-1)!;
 
 export function HeuristicStudy() {
   const { state, run } = useAstarBenchmark();
@@ -26,7 +30,8 @@ export function HeuristicStudy() {
             Our report compared node expansions on random boards from the notebook&apos;s generator
             (random barriers, random start and goal) and found the two heuristics similar on small
             boards, with Manhattan expanding slightly fewer nodes as boards grew. Re-run the
-            experiment here: one random board per size from 2 × 2 to 100 × 100.
+            experiment here: one random board for every size from {FIRST} × {FIRST} to {LAST} ×{" "}
+            {LAST}, counted the way the notebook counted them.
           </p>
         </div>
         <Button onClick={() => run(DIMENSIONS, randomSeed())} disabled={state.status === "running"}>
@@ -37,16 +42,18 @@ export function HeuristicStudy() {
 
       <div className="mt-6">
         {state.status === "idle" && (
-          <div className="text-muted-foreground flex h-56 items-center justify-center rounded-2xl border border-dashed text-sm">
-            Press &ldquo;Run the study&rdquo; to generate 50 random boards in a Web Worker.
+          <div className="text-muted-foreground flex h-56 items-center justify-center rounded-2xl border border-dashed px-4 text-center text-sm">
+            Press &ldquo;Run the study&rdquo; to generate {DIMENSIONS.length} random boards in a Web
+            Worker.
           </div>
         )}
         {state.status === "running" && (
           <div
-            className="text-muted-foreground flex h-56 items-center justify-center gap-2 rounded-2xl border border-dashed text-sm"
+            className="text-muted-foreground flex h-56 items-center justify-center gap-2 rounded-2xl border border-dashed px-4 text-center text-sm"
             role="status"
           >
-            <Loader2 className="size-4 animate-spin" /> Running 100 searches…
+            <Loader2 className="size-4 shrink-0 animate-spin" /> Running {DIMENSIONS.length * 2}{" "}
+            searches ({DIMENSIONS.length} boards × 2 heuristics)…
           </div>
         )}
         {state.status === "error" && (
@@ -74,9 +81,11 @@ function StudyChart({
   seed: number;
   elapsedMs: number;
 }) {
-  const W = 760;
-  const H = 260;
-  const m = { l: 52, r: 12, t: 12, b: 34 };
+  // Draw at the container's real width so the axis labels stay legible.
+  const [boxRef, measured] = useElementWidth<HTMLDivElement>(760);
+  const W = Math.max(280, measured);
+  const H = W < 480 ? 220 : 260;
+  const m = { l: 48, r: 10, t: 12, b: 34 };
   const maxY = Math.max(10, ...rows.flatMap((r) => [r.manhattan, r.euclidean]));
   const minX = rows[0].dimension;
   const maxX = rows.at(-1)!.dimension;
@@ -91,8 +100,9 @@ function StudyChart({
   const sumM = rows.reduce((s, r) => s + r.manhattan, 0);
   const sumE = rows.reduce((s, r) => s + r.euclidean, 0);
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxY * f));
+  const tickStep = W < 480 ? 40 : 20;
   const xTicks = rows
-    .filter((r) => r.dimension % 20 === 0 || r.dimension === minX)
+    .filter((r) => r.dimension % tickStep === 0 || r.dimension === minX)
     .map((r) => r.dimension);
 
   const series = [
@@ -114,57 +124,61 @@ function StudyChart({
           value={`${sumM.toLocaleString("en-AU")} / ${sumE.toLocaleString("en-AU")}`}
         />
       </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label={`Node expansions by board size. Manhattan expanded fewer nodes on ${mWins} boards, Euclidean on ${eWins}.`}
-      >
-        {yTicks.map((t) => (
-          <g key={t}>
-            <line x1={m.l} x2={W - m.r} y1={y(t)} y2={y(t)} className="stroke-border" />
+      <div ref={boxRef} className="w-full">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width={W}
+          height={H}
+          className="block h-auto w-full"
+          role="img"
+          aria-label={`Node expansions by board size. Manhattan expanded fewer nodes on ${mWins} boards, Euclidean on ${eWins}.`}
+        >
+          {yTicks.map((t) => (
+            <g key={t}>
+              <line x1={m.l} x2={W - m.r} y1={y(t)} y2={y(t)} className="stroke-border" />
+              <text
+                x={m.l - 8}
+                y={y(t)}
+                textAnchor="end"
+                dominantBaseline="central"
+                className="fill-muted-foreground font-mono text-[10px]"
+              >
+                {t.toLocaleString("en-AU")}
+              </text>
+            </g>
+          ))}
+          {xTicks.map((d) => (
             <text
-              x={m.l - 8}
-              y={y(t)}
-              textAnchor="end"
-              dominantBaseline="central"
+              key={d}
+              x={x(d)}
+              y={H - m.b + 16}
+              textAnchor="middle"
               className="fill-muted-foreground font-mono text-[10px]"
             >
-              {t.toLocaleString("en-AU")}
+              {d}
             </text>
-          </g>
-        ))}
-        {xTicks.map((d) => (
+          ))}
           <text
-            key={d}
-            x={x(d)}
-            y={H - m.b + 16}
+            x={(m.l + W - m.r) / 2}
+            y={H - 4}
             textAnchor="middle"
-            className="fill-muted-foreground font-mono text-[10px]"
+            className="fill-muted-foreground text-[11px]"
           >
-            {d}
+            Board dimension n
           </text>
-        ))}
-        <text
-          x={(m.l + W - m.r) / 2}
-          y={H - 4}
-          textAnchor="middle"
-          className="fill-muted-foreground text-[11px]"
-        >
-          Board dimension n
-        </text>
-        {series.map((s) => (
-          <polyline
-            key={s.key}
-            points={line(s.key)}
-            fill="none"
-            style={{ stroke: s.colour }}
-            strokeWidth={2}
-            strokeDasharray={s.dash}
-            strokeLinejoin="round"
-          />
-        ))}
-      </svg>
+          {series.map((s) => (
+            <polyline
+              key={s.key}
+              points={line(s.key)}
+              fill="none"
+              style={{ stroke: s.colour }}
+              strokeWidth={2}
+              strokeDasharray={s.dash}
+              strokeLinejoin="round"
+            />
+          ))}
+        </svg>
+      </div>
       <figcaption className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
         {series.map((s) => (
           <span key={s.key} className="flex items-center gap-2">
@@ -179,9 +193,12 @@ function StudyChart({
                 strokeDasharray={s.dash}
               />
             </svg>
-            {s.label} (nodes expanded)
+            {s.label}
           </span>
         ))}
+        <span>
+          Metric: the notebook&apos;s expansion counter (nodes added to the queue after the start)
+        </span>
         <span className="ml-auto font-mono">
           seed {seed} · {Math.round(elapsedMs)} ms in a Web Worker
         </span>

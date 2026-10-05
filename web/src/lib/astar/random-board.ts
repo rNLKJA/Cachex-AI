@@ -5,7 +5,7 @@
  */
 import type { Coord } from "@/lib/cachex/types";
 import { type Rng, createRng, randInt, sample } from "@/lib/rng";
-import { type AStarBoard, type CellState, astar } from "./astar";
+import { type AStarBoard, type AStarResult, type CellState, astar } from "./astar";
 
 /**
  * barriers = sample(nodes, randint(0, d*d - d)); barriers = sample(barriers, len // divisor);
@@ -39,13 +39,25 @@ export interface BenchmarkRow {
   pathFound: boolean;
 }
 
-/** Node expansions (queue pops) for each heuristic on one random board per dimension. */
+/**
+ * The notebook's "node expansion" metric: the `order` insertion counter its
+ * AStar returns. It starts at 0 for the start node and is incremented on every
+ * later push, so it equals pushes - 1 (not the number of queue pops).
+ */
+export const notebookExpansions = (result: Pick<AStarResult, "pushes">) => result.pushes - 1;
+
+/** The notebook metric for each heuristic on one random board per dimension. */
 export function runHeuristicBenchmark(dimensions: readonly number[], seed: number): BenchmarkRow[] {
   const rng = createRng(seed);
   return dimensions.map((dimension) => {
     const board = randomNotebookBoard(dimension, rng);
     const m = astar(board, "manhattan");
     const e = astar(board, "euclidean");
-    return { dimension, manhattan: m.pops, euclidean: e.pops, pathFound: m.path.length > 0 };
+    return {
+      dimension,
+      manhattan: notebookExpansions(m),
+      euclidean: notebookExpansions(e),
+      pathFound: m.path.length > 0,
+    };
   });
 }
