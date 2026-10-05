@@ -2,6 +2,8 @@
 
 import { BookOpen, Dice5, Sparkles, Trophy } from "lucide-react";
 
+import { CommentatorPanel } from "@/components/ai/commentator-panel";
+import { ScrollRegion } from "@/components/stats/scroll-table";
 import type { MoveMeta } from "@/hooks/use-cachex-match";
 import type { Action, Colour } from "@/lib/cachex/types";
 import { sameAction } from "@/lib/cachex/types";
@@ -23,11 +25,17 @@ export function ExplainPanel({
   action,
   colour,
   turn,
+  n,
+  onExplainStart,
 }: {
   meta: MoveMeta | undefined;
   action: Action | undefined;
   colour: Colour | undefined;
   turn: number | undefined;
+  /** Board size; enables the optional AI commentary for searched moves. */
+  n?: number;
+  /** Called when the visitor asks for AI commentary (spectate pauses autoplay). */
+  onExplainStart?: () => void;
 }) {
   if (!meta || !action || !colour) {
     return (
@@ -157,7 +165,7 @@ export function ExplainPanel({
         <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
           Evaluation after this move
         </h3>
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Evaluation features after this move">
           <table className="w-full text-xs">
             <caption className="sr-only">
               Evaluation features and their weighted contribution
@@ -214,13 +222,25 @@ export function ExplainPanel({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
         <p className="text-muted-foreground mt-2 text-xs">
           Scores are from Red&apos;s point of view: Red maximises, Blue minimises.
           {depth > 1 &&
             " With alpha-beta pruning, scores other than the chosen move can be bounds rather than exact values."}
         </p>
       </div>
+
+      {n !== undefined && turn !== undefined && (
+        <CommentatorPanel
+          key={`${n}-${turn}-${actionLabel(action)}`}
+          n={n}
+          turn={turn}
+          colour={colour}
+          action={action}
+          explanation={explanation}
+          onExplainStart={onExplainStart}
+        />
+      )}
     </div>
   );
 }

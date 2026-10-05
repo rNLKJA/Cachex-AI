@@ -1,0 +1,39 @@
+WEBVTT
+
+NOTE Play the agent: captions match the on-screen steps.
+
+1
+00:00:00.200 --> 00:00:05.147
+Step 1 of 9. Open Play: a 5 × 5 board against the minimax agent (seed 4399), coordinates on.
+
+2
+00:00:05.147 --> 00:00:07.595
+Step 2 of 9. Red opens on the strong cell (1, 1).
+
+3
+00:00:07.595 --> 00:00:11.784
+Step 3 of 9. Blue steals: Red's opening tile is mirrored across the diagonal and becomes Blue's.
+
+4
+00:00:11.784 --> 00:00:15.217
+Step 4 of 9. Red plays (0, 1); the agent answers at (4, 1).
+
+5
+00:00:15.217 --> 00:00:18.251
+Step 5 of 9. Red plays (1, 0), leaving two red tiles inside a diamond.
+
+6
+00:00:18.251 --> 00:00:21.066
+Step 6 of 9. Capture: Blue closes the diamond at (0, 0) and removes both red tiles.
+
+7
+00:00:21.066 --> 00:00:24.310
+Step 7 of 9. Red retakes (0, 1); the agent plays (1, 4).
+
+8
+00:00:24.310 --> 00:00:28.797
+Step 8 of 9. Recapture: Red plays (1, 0) and removes Blue's (0, 0) and (1, 1).
+
+9
+00:00:28.797 --> 00:00:39.120
+Step 9 of 9. Why that move? Pick the capture in the move log: search depth, candidate scores, features.

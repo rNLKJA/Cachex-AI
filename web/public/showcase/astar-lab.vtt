@@ -1,0 +1,35 @@
+WEBVTT
+
+NOTE A* Lab: captions match the on-screen steps.
+
+1
+00:00:00.200 --> 00:00:04.824
+Step 1 of 8. Open the A* Lab: the Part A search, ported line by line from Python.
+
+2
+00:00:04.824 --> 00:00:11.873
+Step 2 of 8. Load the original sample input (code/sample_input.json).
+
+3
+00:00:11.873 --> 00:00:20.294
+Step 3 of 8. Manhattan, as in the recorded output: animate the expansions.
+
+4
+00:00:20.294 --> 00:00:26.020
+Step 4 of 8. An 8-cell path that matches sample_output.txt from the original repo.
+
+5
+00:00:26.020 --> 00:00:35.897
+Step 5 of 8. Switch to Euclidean and animate the same board.
+
+6
+00:00:35.897 --> 00:00:40.335
+Step 6 of 8. Same board, both heuristics: path cost, nodes expanded, queue pushes.
+
+7
+00:00:40.335 --> 00:00:47.138
+Step 7 of 8. Paired study on 980 boards: paired bootstrap CI and Wilcoxon test on expansions.
+
+8
+00:00:47.138 --> 00:00:52.680
+Step 8 of 8. Optimality against breadth-first search: paired difference and exact McNemar test.

@@ -78,6 +78,11 @@ export interface AgentOptions {
   bias?: BiasFn;
   /** Use the opening book on turns 1 and 2 (the original's default). */
   enforceGamePlay?: boolean;
+  /**
+   * Search to this depth instead of `dynamic_depth_allocation` (used by the
+   * tournament's fixed-depth and greedy variants; the original never sets it).
+   */
+  fixedDepth?: number;
 }
 
 /** Choose the agent's action for `colour`, given the full action history. */
@@ -96,7 +101,7 @@ export function agentAction(
   colour: Colour,
   options: AgentOptions = {},
 ): AgentDecision {
-  const { order = "canonical", bias = noBias, enforceGamePlay = true } = options;
+  const { order = "canonical", bias = noBias, enforceGamePlay = true, fixedDepth } = options;
 
   if (board.turn <= 2 && enforceGamePlay) {
     const { action, rule } = enforcedGamestartPlay(board.n, colour, board);
@@ -110,7 +115,7 @@ export function agentAction(
     if (gameEnd(tmp)) return { action, explanation: { kind: "instant-win" } };
   }
 
-  const depth = dynamicDepthAllocation(board);
+  const depth = fixedDepth ?? dynamicDepthAllocation(board);
   const ctx = createContext(order, bias);
   ctx.rootScores = [];
   const [score, action] = minimax(board, depth, -Infinity, Infinity, colour === "red", ctx, true);
