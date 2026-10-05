@@ -18,9 +18,8 @@ import type { MoveExplanation } from "@/lib/agent/player";
 import { DECISION_LABEL, type HumanDecision } from "@/lib/ai/audit-log";
 import { callStructured } from "@/lib/ai/client";
 import {
-  CommentarySchema,
   buildCommentaryFacts,
-  commentaryPrompt,
+  commentaryRequest,
   commentaryToText,
   groundingCheck,
 } from "@/lib/ai/commentator";
@@ -85,19 +84,11 @@ export function CommentatorPanel({
     if (!credentials) return openSettings();
     onExplainStart?.();
     setState({ status: "loading" });
-    const prompt = commentaryPrompt(facts);
     try {
-      const res = await callStructured(
-        credentials,
-        {
-          feature: "commentator",
-          ...prompt,
-          schema: CommentarySchema,
-          schemaName: "move_commentary",
-          maxTokens: 1500,
-        },
-        { audit, context: { boardSize: n, turn, mover: colour } },
-      );
+      const res = await callStructured(credentials, commentaryRequest(facts), {
+        audit,
+        context: { boardSize: n, turn, mover: colour },
+      });
       setState({
         status: "done",
         commentary: res.data,

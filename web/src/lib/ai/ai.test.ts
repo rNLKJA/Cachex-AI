@@ -11,15 +11,18 @@ import { callAnthropic } from "./anthropic";
 import { MemoryAuditStore, auditToCsv, auditToJson } from "./audit-log";
 import { callStructured } from "./client";
 import {
+  COMMENTATOR_MAX_TOKENS,
   type Commentary,
   CommentarySchema,
   buildCommentaryFacts,
   commentaryPrompt,
+  commentaryRequest,
   commentaryToText,
   groundingCheck,
   mentionedNumbers,
 } from "./commentator";
 import {
+  LLM_PLAYER_MAX_TOKENS,
   type LlmMove,
   LlmMoveSchema,
   buildMovePrompt,
@@ -544,6 +547,41 @@ describe("commentator", () => {
     const prompt = commentaryPrompt(facts);
     expect(prompt.system).toContain("Use ONLY the facts");
     expect(prompt.user).toContain(JSON.stringify(facts, null, 2));
+  });
+
+  it("sends one request with room for a reasoning model's thinking, to either provider", async () => {
+    const req = commentaryRequest(facts);
+    expect(req).toMatchObject({
+      feature: "commentator",
+      schemaName: "move_commentary",
+      maxTokens: COMMENTATOR_MAX_TOKENS,
+      ...commentaryPrompt(facts),
+    });
+    // Same ceiling as the LLM player: thinking and reasoning tokens count against it.
+    expect(COMMENTATOR_MAX_TOKENS).toBe(LLM_PLAYER_MAX_TOKENS);
+
+    const reply = JSON.stringify({
+      summary: "Red played a move.",
+      key_factors: [],
+      caveat: "None.",
+    });
+    const anthropic = vi.fn<FetchLike>(async () => json(anthropicMessage(reply)));
+    await callAnthropic(KEY, "claude-sonnet-5-5", req, { fetch: anthropic });
+    const sent = JSON.parse(String(anthropic.mock.calls[0][1]?.body));
+    expect(sent.max_tokens).toBe(COMMENTATOR_MAX_TOKENS);
+    expect(sent.output_config.effort).toBe("low"); // Sonnet: keep thinking light
+    expect(sent).not.toHaveProperty("thinking"); // adaptive by default; "disabled" is a 400 on Sonnet 5.5
+    expect(sent).not.toHaveProperty("temperature"); // non-default sampling is a 400 on Sonnet 5.5
+
+    const openai = vi.fn<FetchLike>(async () =>
+      json({
+        model: "gpt-5-mini",
+        choices: [{ finish_reason: "stop", message: { content: reply } }],
+      }),
+    );
+    await callOpenAI(KEY, "gpt-5-mini", req, { fetch: openai });
+    const sentOpenAI = JSON.parse(String(openai.mock.calls[0][1]?.body));
+    expect(sentOpenAI.max_completion_tokens).toBe(COMMENTATOR_MAX_TOKENS);
   });
 
   const strongest = [...facts.features_after_move].sort(

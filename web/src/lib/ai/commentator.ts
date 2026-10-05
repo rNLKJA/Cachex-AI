@@ -15,6 +15,7 @@ import { z } from "zod";
 import type { FeatureContribution, FeatureId } from "@/lib/agent/evaluation";
 import type { MoveExplanation } from "@/lib/agent/player";
 import type { Action, Colour } from "@/lib/cachex/types";
+import type { StructuredRequest } from "./types";
 
 export const FEATURE_IDS = [
   "empty",
@@ -142,6 +143,27 @@ export function commentaryPrompt(facts: CommentaryFacts): { system: string; user
   return {
     system: COMMENTATOR_SYSTEM,
     user: `Explain this move using only these facts.\n\nFacts (JSON):\n${JSON.stringify(facts, null, 2)}`,
+  };
+}
+
+/**
+ * Output-token budget for one commentary. The reply itself is a few hundred
+ * tokens, but on reasoning models the budget also has to cover thinking
+ * (Claude Sonnet 5.5 runs adaptive thinking by default, and OpenAI counts
+ * reasoning tokens in `max_completion_tokens`), so it matches the LLM
+ * player's budget. It is a ceiling, not a charge: providers bill the tokens
+ * actually generated. A reply that still hits it is reported as "truncated".
+ */
+export const COMMENTATOR_MAX_TOKENS = 4096;
+
+/** The full structured request for one commentary, as sent to either provider. */
+export function commentaryRequest(facts: CommentaryFacts): StructuredRequest<Commentary> {
+  return {
+    feature: "commentator",
+    ...commentaryPrompt(facts),
+    schema: CommentarySchema,
+    schemaName: "move_commentary",
+    maxTokens: COMMENTATOR_MAX_TOKENS,
   };
 }
 
