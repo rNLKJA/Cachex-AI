@@ -18,7 +18,7 @@ import {
 } from "@/lib/ai/audit-log";
 import { CommentarySchema, commentaryToText, recheckLoggedCommentary } from "@/lib/ai/commentator";
 import { FEATURE_LABEL, PROVIDER_LABEL } from "@/lib/ai/types";
-import { downloadText } from "@/lib/download";
+import { downloadText, localDateStamp } from "@/lib/download";
 import { cn } from "@/lib/utils";
 import { AiBadge } from "./ai-badge";
 import { useAi } from "./ai-provider";
@@ -94,8 +94,6 @@ export function AiLogClient() {
     };
   }, [entries, checks]);
 
-  const stamp = new Date().toISOString().slice(0, 10);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
@@ -120,7 +118,11 @@ export function AiLogClient() {
             variant="outline"
             disabled={!shown.length}
             onClick={() =>
-              downloadText(`cachex-ai-audit-${stamp}.json`, auditToJson(shown), "application/json")
+              downloadText(
+                `cachex-ai-audit-${localDateStamp()}.json`,
+                auditToJson(shown),
+                "application/json",
+              )
             }
           >
             <Download /> JSON
@@ -129,7 +131,9 @@ export function AiLogClient() {
             size="sm"
             variant="outline"
             disabled={!shown.length}
-            onClick={() => downloadText(`cachex-ai-audit-${stamp}.csv`, auditToCsv(shown))}
+            onClick={() =>
+              downloadText(`cachex-ai-audit-${localDateStamp()}.csv`, auditToCsv(shown))
+            }
           >
             <Download /> CSV
           </Button>
