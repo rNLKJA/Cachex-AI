@@ -6,7 +6,7 @@
  *  2. play an immediately winning move if one exists,
  *  3. otherwise minimax + alpha-beta with a dynamically allocated depth.
  */
-import { type Action, type Colour, STEAL, isSteal, place } from "@/lib/cachex/types";
+import { type Action, type Colour, STEAL, place } from "@/lib/cachex/types";
 import { AgentBoard } from "./agent-board";
 import {
   type BiasFn,
@@ -135,5 +135,3 @@ export function agentAction(
     },
   };
 }
-
-export const describeAction = (a: Action) => (isSteal(a) ? "STEAL" : `(${a[1]}, ${a[2]})`);
