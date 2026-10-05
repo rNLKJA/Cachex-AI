@@ -302,7 +302,7 @@ export default function HomePage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <BigStat
                 value={`${winRate}%`}
-                label={`wins against the random agent (${totals.wins} of ${totals.games} games, both colours, n = 4–7; Wilson 95% CI ${formatPct(winCI.lower)} to ${formatPct(winCI.upper)})`}
+                label={`wins against the random agent (${totals.wins} of ${totals.games} games, both colours, boards 4 × 4 to 7 × 7; Wilson 95% CI ${formatPct(winCI.lower)} to ${formatPct(winCI.upper)})`}
               />
               <BigStat
                 value="8 & 13"

@@ -86,10 +86,11 @@ export function TournamentRunner() {
   const stamp = `seed-${ranSeed}`;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <Panel title="Set up a round robin" className="lg:self-start">
-        <div className="space-y-4">
-          <fieldset className="space-y-2" disabled={running}>
+    <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+      <Panel title="Set up a round robin" className="xl:self-start">
+        {/* Two columns while the panel spans the full width; one column beside the results (xl). */}
+        <div className="space-y-4 md:grid md:grid-cols-2 md:space-y-0 md:gap-x-8 md:gap-y-4 xl:block xl:space-y-4">
+          <fieldset className="space-y-2 md:row-span-5" disabled={running}>
             <legend className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
               Agents
             </legend>
