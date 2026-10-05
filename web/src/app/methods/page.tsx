@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { PageHeader, Section } from "@/components/layout/page-header";
 import { Markdown } from "@/components/methods/markdown";
+import { ScrollRegion } from "@/components/stats/scroll-table";
 import benchmark from "@/lib/data/agent-benchmark.json";
 import { listDecisions, readDoc, withoutTitle } from "@/lib/content/docs";
 import {
@@ -98,7 +99,7 @@ export default function MethodsPage() {
             original 2022 Python in <code className="font-mono">coursework/</code> is never
             modified; the TypeScript port is checked against it by parity tests (DR-003).
           </p>
-          <div className="relative mt-4 overflow-x-auto">
+          <ScrollRegion label="Data provenance table" className="mt-4">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="text-muted-foreground text-left text-xs">
                 <tr className="border-b">
@@ -138,7 +139,7 @@ export default function MethodsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </Section>
 
         <Section id="method" eyebrow="What was done" title="Method">
@@ -204,8 +205,17 @@ export default function MethodsPage() {
             </li>
             <li>
               <strong>Paired comparisons where two methods are compared:</strong> heuristics on the
-              same boards, search variants on the same positions, colour-swapped game pairs on the
-              same seeds, and LLM versus baselines on the same schedule.
+              same boards (paired bootstrap and Wilcoxon for node counts, paired bootstrap and exact
+              McNemar for shortest-path rates), search variants on the same positions,
+              colour-swapped game pairs on the same seeds, agents compared through Elo differences
+              taken from the same bootstrap refits (never by whether two intervals overlap), and LLM
+              versus baselines on exactly the games the model finished.
+            </li>
+            <li>
+              <strong>LLM answers are scored per turn, one rule for both providers:</strong> the
+              rate reported is the share of turns whose first answer was rejected, split into
+              illegal moves and replies with no usable move (malformed, cut off or refused), because
+              retries on the same turn are not independent trials.
             </li>
             <li>
               <strong>Effect sizes, not just p-values:</strong> differences in win rate and Elo with

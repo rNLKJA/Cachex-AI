@@ -45,7 +45,7 @@ ported to TypeScript line by line and is verified against the original code.
 | `/spectate` | AI vs AI with play/pause/step, a speed control, seeded replays, an evaluation trend chart and the same optional commentary |
 | `/astar` | Paint tiles, move start and goal, animate A\* expansions, toggle Manhattan/Euclidean and the original block-colour option, load or export the original `sample_input.json` format, and a **paired heuristic study**: both heuristics on the same random boards, paired bootstrap interval, Wilcoxon signed-rank test, effect sizes, and an optimality check against breadth-first search |
 | `/tournament` | **Round-robin harness**: the original agent vs fixed-depth, greedy and random variants, colour-swapped and seeded, in parallel Web Workers. Wilson intervals for win rates, Bradley-Terry strengths on the Elo scale with bootstrap intervals, first-move effect, move times, CSV export. Shows a precomputed 1,200-game reference tournament, a cross-check against the original Python, the original 144/160 benchmark restated with its interval, and an **alpha-beta efficiency study** |
-| `/llm-arena` | **LLM as a player** (bring your own key): a language model plays short games against the minimax agent via structured JSON moves validated against the legal moves; win rate with Wilson interval, illegal-answer rate, latency and tokens, side by side with random and greedy baselines on identical seeds |
+| `/llm-arena` | **LLM as a player** (bring your own key): a language model plays short games against the minimax agent via structured JSON moves validated against the legal moves; win rate with Wilson interval, the share of turns whose first answer was rejected (illegal move vs no usable move, scored the same way for both providers), forfeits, latency and tokens, side by side with random, greedy and a scripted first-legal-cell baseline on the same seeds (only the games the model finished, if a run stops early) |
 | `/methods` | Data provenance, method, evaluation design, assumptions, limitations, "what I'd change", the decision records (`/methods/decisions/…`), the agent card (`/methods/agent-card`) and the AI use statement |
 | `/ai-log` | The AI audit log: every AI call made from this browser, with exact input, output, latency, tokens and your review decision; JSON and CSV export |
 
@@ -66,10 +66,15 @@ From the original Python:
 From the 2026 evaluation (details, seeds and downloadable data on the site):
 
 - **Dynamic depth barely runs.** In a 1,200-game round robin (4×4 to 6×6), the original searched
-  deeper than one ply on 34 of 4,602 searched moves (0.7%), and it is indistinguishable from a
-  greedy one-ply agent on the same evaluation (61 wins to 59; 50.8%, 95% CI 42.0% to 59.6%).
-  Fixed depth 3 beats it in 84 of 120 games (Bradley-Terry: 490 vs 339 Elo above random, 95% CIs
-  432 to 559 and 290 to 396).
+  deeper than one ply on 34 of 4,602 searched moves (0.7%), and there is no detectable difference
+  from a greedy one-ply agent on the same evaluation (61 wins to 59; 50.8%, 95% CI 42.0% to
+  59.6%; Elo difference +15, 95% CI −24 to +56). That interval only rules out differences larger
+  than about 10 points of win rate. Fixed depth 3 beats it in 84 of 120 games and is 151 Elo
+  stronger (95% CI 106 to 195; Elo differences come from the same bootstrap refits, not from
+  comparing two intervals).
+- **It does not block one-move wins.** Searching one ply, it never looks at the opponent's next
+  move: a scripted Blue that just fills row 0 left to right beats it in 50 of 50 seeded games on
+  4×4 (43 of 50 on 5×5, 34 of 50 on 6×6). The LLM arena uses this script as a baseline.
 - **Alpha-beta saves almost nothing because of a one-line bug.** The original's
   `if beta <= min_score: beta = min_score` never narrows the window, so the search visits 92% to
   100% of the full minimax tree; a textbook update would visit 17% to 45%. Results are unaffected
@@ -78,9 +83,12 @@ From the 2026 evaluation (details, seeds and downloadable data on the site):
 - **Manhattan is faster but less often optimal.** On 980 paired random boards Manhattan expands
   110 fewer nodes per board (95% CI 96 to 126 fewer; Wilcoxon p < 0.001, rank-biserial r = −0.81)
   but returns a shortest path on 74.3% of solvable boards (71.4% to 77.0%) against 85.6% (83.2% to
-  87.7%) for Euclidean. Neither heuristic is admissible on this hex grid.
-- **The harness agrees with the original Python** on every pairing feasible in Python (480 games;
-  all six win-rate differences have Newcombe 95% intervals containing 0).
+  87.7%) for Euclidean. On the same 931 boards that is 11.3 points fewer (paired bootstrap 95% CI
+  9.1 to 13.3); where only one heuristic was optimal it was Manhattan on 1 board and Euclidean on
+  106 (exact McNemar p < 0.001). Neither heuristic is admissible on this hex grid.
+- **No detectable disagreement with the original Python** on the pairings feasible in Python
+  (480 games; every Newcombe 95% interval for the six win-rate differences contains 0). With 80
+  games per pairing this check can only detect differences larger than about ±15 points.
 
 ## Bring your own key (optional AI features)
 
@@ -90,7 +98,8 @@ API key into **AI settings** (the key icon in the header):
 - **Providers:** Anthropic (default; Claude Haiku 4.5, or Claude Sonnet 5.5) or OpenAI (any model id
   you type, default `gpt-5-mini`).
 - **Where the key lives:** in your browser only. Session storage by default (cleared when the tab
-  closes); local storage only if you tick "remember on this device". "Forget key" removes it.
+  closes); local storage only if you tick "remember on this device". "Forget key" removes every
+  saved key, for both providers.
 - **Where it goes:** calls go **directly from your browser** to the provider (Anthropic with the
   `anthropic-dangerous-direct-browser-access` header via the official SDK; OpenAI's Chat
   Completions API). This is a static site with no server, so the key is never sent to us, never
@@ -116,6 +125,7 @@ not a claim of compliance with any of them.
   - [DR-001](docs/decisions/DR-001-evaluation-function.md) evaluation function features and weights
   - [DR-002](docs/decisions/DR-002-dynamic-depth-allocation.md) dynamic depth allocation
   - [DR-003](docs/decisions/DR-003-typescript-port-web-workers.md) TypeScript port, Web Workers and parity testing
+  - [DR-004](docs/decisions/DR-004-paired-comparisons.md) comparing two methods by their paired difference
 - All of these are rendered on the site under `/methods`. Past records are never edited; a new
   record supersedes an old one.
 

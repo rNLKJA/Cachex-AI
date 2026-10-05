@@ -464,7 +464,12 @@ export function AstarLab() {
                 </span>
               )}
             </p>
-            <pre className="bg-background/60 max-h-52 overflow-auto rounded-lg border p-3 font-mono text-xs leading-relaxed">
+            <pre
+              role="region"
+              aria-label="Search output in the original CLI format"
+              tabIndex={0}
+              className="bg-background/60 focus-visible:ring-ring/50 max-h-52 overflow-auto rounded-lg border p-3 font-mono text-xs leading-relaxed outline-none focus-visible:ring-3"
+            >
               {outcome.ok ? (view?.done ? cli : "…searching") : "error"}
             </pre>
             {preset && (
@@ -557,7 +562,9 @@ function CompareTable({
       </caption>
       <thead className="text-muted-foreground">
         <tr className="border-b">
-          <th scope="col" className="py-1 text-left font-medium" />
+          <th scope="col" className="py-1 text-left font-medium">
+            <span className="sr-only">Measure</span>
+          </th>
           <th
             scope="col"
             className={cn(

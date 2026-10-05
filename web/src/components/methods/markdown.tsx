@@ -6,8 +6,46 @@ import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { ScrollRegion } from "@/components/stats/scroll-table";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
+
+type HastNode = { type?: string; tagName?: string; value?: string; children?: HastNode[] };
+
+const textOf = (node: HastNode | undefined): string =>
+  !node
+    ? ""
+    : node.type === "text"
+      ? (node.value ?? "")
+      : (node.children ?? []).map(textOf).join("");
+
+/** Cells of a markdown table's first (header) row. */
+function headerCells(table: HastNode | undefined): HastNode[] {
+  const firstRow = (node: HastNode | undefined): HastNode | undefined => {
+    if (!node) return undefined;
+    if (node.tagName === "tr") return node;
+    for (const child of node.children ?? []) {
+      const row = firstRow(child);
+      if (row) return row;
+    }
+    return undefined;
+  };
+  return (firstRow(table)?.children ?? []).filter((c) => c.tagName === "th" || c.tagName === "td");
+}
+
+/** A distinct accessible name for a scrollable table: its column headings. */
+function tableLabel(table: HastNode | undefined): string {
+  const heads = headerCells(table)
+    .map((c) => textOf(c).trim())
+    .filter(Boolean);
+  return heads.length ? `Table: ${heads.join(", ")}` : "Table";
+}
+
+/** A distinct accessible name for a code block: its first line. */
+function codeLabel(pre: HastNode | undefined): string {
+  const first = textOf(pre).trim().split("\n")[0] ?? "";
+  return first ? `Code: ${first.slice(0, 60)}` : "Code";
+}
 
 /** Map links between docs to site routes; other repo-relative links go to GitHub. */
 function resolveHref(href: string): { href: string; external: boolean } {
@@ -48,15 +86,31 @@ const components: Components = {
     className ? (
       <code className={cn("font-mono text-xs", className)}>{children}</code>
     ) : (
-      <code className="bg-muted rounded px-1 py-0.5 font-mono text-[0.85em]">{children}</code>
+      // Long paths (e.g. in table cells) may wrap rather than force a sideways scroll.
+      <code className="bg-muted rounded px-1 py-0.5 font-mono text-[0.85em] [overflow-wrap:anywhere]">
+        {children}
+      </code>
     ),
-  pre: ({ children }) => (
-    <pre className="bg-muted/60 mt-3 overflow-x-auto rounded-xl border p-3 text-xs">{children}</pre>
+  pre: ({ node, children }) => (
+    <ScrollRegion
+      label={codeLabel(node as HastNode)}
+      className="bg-muted/60 mt-3 rounded-xl border"
+    >
+      <pre className="p-3 text-xs">{children}</pre>
+    </ScrollRegion>
   ),
-  table: ({ children }) => (
-    <div className="relative mt-4 overflow-x-auto">
-      <table className="w-full min-w-[480px] text-sm">{children}</table>
-    </div>
+  // Two-column tables wrap to the screen; wider ones keep a minimum width and scroll.
+  table: ({ node, children }) => (
+    <ScrollRegion label={tableLabel(node as HastNode)} className="mt-4">
+      <table
+        className={cn(
+          "w-full text-sm",
+          headerCells(node as HastNode).length > 2 && "min-w-[480px]",
+        )}
+      >
+        {children}
+      </table>
+    </ScrollRegion>
   ),
   thead: ({ children }) => (
     <thead className="text-muted-foreground text-left text-xs">{children}</thead>

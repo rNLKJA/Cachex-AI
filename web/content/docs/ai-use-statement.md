@@ -16,7 +16,11 @@ not a claim of compliance or certification with any of them.
    contributions. It is instructed to use nothing else.
 2. **LLM as a player** (on `/llm-arena`). A model plays a few short games against the original
    agent. Each turn it receives the rules, the board, the move history and the list of legal
-   moves, and returns one move as JSON.
+   moves, and returns one move as JSON. Answers are scored the same way for both providers, under
+   the same output-token budget: an illegal move, or a reply with no usable move (malformed, cut
+   off at the token limit, or refused), is rejected and asked again, up to three times. The
+   headline is the share of turns whose first answer was rejected, reported next to random,
+   greedy and scripted baselines on the same seeds.
 
 ## What they never do
 
@@ -43,10 +47,12 @@ processes the request under its own terms and bills your account.
   directions must match the sign of their contribution, and every number and move it mentions
   must appear in the input. The result of that check is shown next to the text.
 - You review each commentary and record a decision: accept, edit (your edit is stored next to
-  the original) or reject.
+  the original) or reject. Commentary you did not review where it appeared (for example because
+  the game moved on) stays "awaiting review" and can be decided later on `/ai-log`.
 - Every call, successful or not, is recorded in the AI audit log at `/ai-log` with its
-  timestamp, feature, provider, model, exact input, output, latency, token usage when the
-  provider reports it, and your decision. Automated evaluation calls (the LLM player) are
+  timestamp, feature, provider, model, exact input, output (including the raw reply when it
+  failed validation, was cut off or was refused), latency, token usage when the provider reports
+  it, and your decision. Automated evaluation calls (the LLM player) are
   marked "n/a". The log stays in your browser and can be exported as JSON or CSV, or cleared.
 
 ## Known limitations

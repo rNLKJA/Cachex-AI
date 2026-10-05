@@ -6,7 +6,7 @@ each interval was computed. Last updated 6 October 2026.
 
 ## Overview
 
-| | |
+| Item | Detail |
 | --- | --- |
 | **What it is** | Minimax with alpha-beta pruning over a hand-tuned six-feature evaluation, plus a two-move opening book and an instant-win check |
 | **Authors** | Team _4399: Sunchuangyu "Rin" Huang and Wei Zhao (COMP30024, University of Melbourne, Semester 1 2022) |
@@ -43,15 +43,16 @@ All intervals are 95%. Win rates use Wilson score intervals; strengths are Bradl
 | Greedy one-ply (variant) | 324 (274 to 386) | 51.5% (47.0% to 55.9%) |
 | Random | 0 (reference) | 10.2% (7.8% to 13.2%) |
 
-Head to head, the original beat random in 106 of 120 games (88.3%, 81.4% to 92.9%), drew level with greedy one-ply (61 to 59; 50.8%, 42.0% to 59.6%) and lost to fixed depth 3 in 84 of 120 (its win rate 30.0%, 22.5% to 38.7%). Red, the first mover, won 50.3% of all games: no first-move advantage was detectable once STEAL is available.
+Head to head, the original beat random in 106 of 120 games (88.3%, 81.4% to 92.9%), drew level with greedy one-ply (61 to 59; 50.8%, 42.0% to 59.6%) and lost to fixed depth 3 in 84 of 120 (its win rate 30.0%, 22.5% to 38.7%). Compared directly, from the same bootstrap refits (the two strengths come from one fit, so their separate intervals are correlated and overlap is not a test): the original minus greedy is +15 Elo (95% CI −24 to +56), so no difference is detectable, while fixed depth 3 minus the original is +151 Elo (106 to 195). Red, the first mover, won 50.3% of all games (95% CI 47.5% to 53.2%): no first-move advantage was detectable in these games, which all allow STEAL; a no-STEAL condition was not tested.
 
-**Cross-check.** The pairings feasible in Python (boards 4 and 5, 80 games each) were re-run from the unchanged original; all six win-rate differences against the TypeScript run have Newcombe 95% intervals that contain 0.
+**Cross-check.** The pairings feasible in Python (boards 4 and 5, 80 games each) were re-run from the unchanged original; all six win-rate differences against the TypeScript run have Newcombe 95% intervals that contain 0. That is no detectable disagreement, not proof of agreement: with 80 games per pairing the check can only detect differences larger than about ±15 percentage points.
 
 **Search efficiency.** On 120 mid-game positions, the alpha-beta search visits 92% to 100% of the nodes plain minimax visits; a textbook beta update would visit 17% to 45%. All 480 searches returned the same root value as plain minimax.
 
 ## Known weaknesses and failure modes
 
 - **Effectively one ply deep.** The deeper search triggers on only 0.7% of searched moves (34 of 4,602), because most games end before 85% of the board is full. In practice the agent is greedy one-ply plus an opening book, and plays like it.
+- **Does not block one-move wins.** While at least 15% of cells are empty it searches one ply, and its instant-win check looks only for its own wins, so it never considers the opponent's next move. A scripted Blue that just plays the first empty cell in (r, q) order (filling row 0 left to right) beats it as Red in 50 of 50 seeded games on 4 × 4, 43 of 50 on 5 × 5 and 34 of 50 on 6 × 6 (seeds 0 to 49). In 124 of those 127 losses the agent had left Blue a one-move win that a single Red move could have blocked. Reproduce with `cd web && pnpm test` (the "first-legal-cell" tests in `src/lib/ai/ai.test.ts`). The LLM arena includes this scripted line as a baseline, so a model's wins can be judged against it.
 - **Pruning bug.** The minimising branch's `if beta <= min_score: beta = min_score` never narrows the window, so alpha-beta saves almost nothing. Correct results, wasted work.
 - **No notion of connection.** None of the six features measures progress towards linking the agent's edges, which is the goal of the game. A path-distance feature exists in the code but is switched off.
 - **Rim-favouring positional weights.** The score matrix rates the rim above the centre, against standard Hex opening advice; untested either way.
