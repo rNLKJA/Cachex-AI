@@ -17,9 +17,11 @@ import {
   LLM_PLAYER_MAX_TOKENS,
   type LlmGameRecord,
   LlmMoveSchema,
+  type PairedWithLlm,
   type ScheduledGame,
   completedSchedule,
   llmGamesCsvRows,
+  pairWithLlm,
   playLlmGame,
   scheduleGames,
   summariseBaseline,
@@ -30,13 +32,23 @@ import { Game } from "@/lib/cachex/game";
 import type { Action, Colour } from "@/lib/cachex/types";
 import { toCsv } from "@/lib/csv";
 import { downloadText } from "@/lib/download";
-import { formatNumber, formatPct } from "@/lib/stats/format";
-import type { ProportionCI } from "@/lib/stats/proportion";
+import { formatNumber, formatPStatement, formatPct } from "@/lib/stats/format";
+import type { ClusteredProportionCI, ProportionCI } from "@/lib/stats/proportion";
 import { AiBadge } from "./ai-badge";
 import { useAi } from "./ai-provider";
 
 const formatLatency = (ms: number) =>
   ms < 1000 ? `${Math.round(ms)} ms` : `${formatNumber(ms / 1000, 1)} s`;
+
+/** How the clustered interval was made, in a few words. */
+const designEffectNote = (r: ClusteredProportionCI) =>
+  Number.isFinite(r.designEffect)
+    ? `design effect ${formatNumber(Math.max(1, r.designEffect), 2)} over ${r.clusters} games`
+    : r.clusters < 2
+      ? "one game: turns treated as independent"
+      : r.successes === 0 || r.successes === r.n
+        ? "no spread between games to estimate a design effect"
+        : "design effect not estimable";
 
 const pctCI = (lo: number, hi: number) => `[${(lo * 100).toFixed(1)}, ${(hi * 100).toFixed(1)}]`;
 
@@ -195,8 +207,16 @@ export function LlmArenaClient() {
   );
   const comparedN = ran?.n ?? size;
   const baselines = useMemo(
-    () => BASELINES.map((b) => ({ ...b, summary: summariseBaseline(comparedN, compared, b.id) })),
-    [compared, comparedN],
+    () =>
+      BASELINES.map((b) => {
+        const summary = summariseBaseline(comparedN, compared, b.id);
+        return {
+          ...b,
+          summary,
+          paired: summary && records.length ? pairWithLlm(records, summary) : null,
+        };
+      }),
+    [compared, comparedN, records],
   );
   const scheduled = ran?.schedule.length ?? schedule.length;
   const asRed = compared.filter((g) => g.llmColour === "red").length;
@@ -326,7 +346,7 @@ export function LlmArenaClient() {
             )}
           </div>
           <ScrollTable
-            className="min-w-[640px]"
+            className="min-w-[760px]"
             caption={
               <>
                 {ran && compared.length < scheduled ? (
@@ -345,8 +365,13 @@ export function LlmArenaClient() {
                     effect does not cancel.
                   </>
                 )}{" "}
-                Baselines are computed in your browser. Wilson 95% intervals: with a handful of
-                games they are wide, which is the honest answer. The scripted baseline plays the
+                Baselines are computed in your browser. Win rates: Wilson 95% intervals, wide with a
+                handful of games, which is the honest answer. The paired column compares each
+                baseline with the model game by game: only games exactly one of them won count, with
+                an exact McNemar test (with 4 games it can only detect a very large difference).
+                Turns within a game are not independent, so the rejected-answer interval is a Wilson
+                interval on the effective number of turns, after a design effect estimated from how
+                much the rate varies between games (never below 1). The scripted baseline plays the
                 first empty cell in (r, q) order; as Blue that line wins unless Red blocks it, so a
                 model that beats the agent should also beat this row.
               </>
@@ -366,7 +391,11 @@ export function LlmArenaClient() {
                 </th>
                 <th scope="col" className="py-2 pr-3 font-medium">
                   First answer rejected
-                  <span className="block font-normal">per turn (95% CI)</span>
+                  <span className="block font-normal">per turn (95% CI, clustered by game)</span>
+                </th>
+                <th scope="col" className="py-2 pr-3 font-medium">
+                  Paired with the LLM
+                  <span className="block font-normal">same games, exact McNemar</span>
                 </th>
                 <th scope="col" className="py-2 text-right font-medium whitespace-nowrap">
                   Latency · tokens
@@ -386,10 +415,12 @@ export function LlmArenaClient() {
                 illegal={summary?.firstAnswerRejected ?? null}
                 illegalDetail={
                   summary
-                    ? `${summary.firstAnswerIllegal} illegal move${summary.firstAnswerIllegal === 1 ? "" : "s"} · ${summary.firstAnswerFormat} with no usable move`
+                    ? `${summary.firstAnswerIllegal} illegal move${summary.firstAnswerIllegal === 1 ? "" : "s"} · ${summary.firstAnswerFormat} with no usable move · ${designEffectNote(summary.firstAnswerRejected)}`
                     : undefined
                 }
                 illegalNote="–"
+                paired={null}
+                pairedNote="–"
                 perf={
                   summary
                     ? `${formatLatency(summary.meanLatencyMs)}/answer · ${summary.meanInputTokens === null ? "–" : `${formatNumber(summary.meanInputTokens, 0)} in / ${formatNumber(summary.meanOutputTokens ?? 0, 0)} out`}`
@@ -407,6 +438,8 @@ export function LlmArenaClient() {
                       : "waiting for the first finished game"
                   }
                   illegal={null}
+                  paired={b.paired}
+                  pairedNote={summary ? "–" : "after a run"}
                   perf="instant"
                 />
               ))}
@@ -483,15 +516,19 @@ function Row({
   illegal,
   illegalDetail,
   illegalNote = "0 by construction",
+  paired,
+  pairedNote,
   perf,
 }: {
   label: string;
   badge?: boolean;
   ci: ProportionCI | null;
   extra: string;
-  illegal: ProportionCI | null;
+  illegal: ClusteredProportionCI | null;
   illegalDetail?: string;
   illegalNote?: string;
+  paired: PairedWithLlm | null;
+  pairedNote: string;
   perf: string;
 }) {
   return (
@@ -534,6 +571,21 @@ function Row({
           </>
         ) : (
           <span className="text-muted-foreground text-xs">{illegalNote}</span>
+        )}
+      </td>
+      <td className="py-2 pr-3 text-xs">
+        {paired ? (
+          <>
+            <span className="font-mono tabular-nums">
+              {paired.llmOnly} vs {paired.baselineOnly}
+            </span>
+            <span className="text-muted-foreground block">
+              won by the LLM only vs this row only, of {paired.games};{" "}
+              {formatPStatement(paired.mcnemar.pValue)}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">{pairedNote}</span>
         )}
       </td>
       <td className="py-2 text-right font-mono text-xs whitespace-nowrap">{perf}</td>

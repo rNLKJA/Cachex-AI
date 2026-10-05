@@ -39,6 +39,50 @@ export function wilson(successes: number, n: number, level = 0.95): ProportionCI
   };
 }
 
+export interface ClusteredProportionCI extends ProportionCI {
+  /** Number of clusters (e.g. games) the trials (e.g. turns) fall into. */
+  clusters: number;
+  /**
+   * Design effect: cluster-robust variance of the pooled proportion over its
+   * variance under independent trials, floored at 1 so the interval is never
+   * narrower than Wilson's. NaN when it cannot be estimated (fewer than 2
+   * clusters, or p of 0 or 1); the interval then assumes independence.
+   */
+  designEffect: number;
+  /** Trials divided by the (floored) design effect. */
+  effectiveN: number;
+}
+
+/**
+ * Wilson interval for a proportion whose trials are clustered (turns within
+ * games), on the effective sample size n / deff (Kish's design effect). The
+ * variance of the pooled proportion p = Σy / Σm is the cluster-robust
+ * (linearised) estimate G / (G - 1) · Σ (y_g - p·m_g)² / M², which equals the
+ * cluster-robust variance of an intercept-only regression in statsmodels
+ * (`cov_type="cluster"`). Trials that bunch within clusters raise deff and
+ * widen the interval; deff is floored at 1, so clusters that happen to look
+ * alike never make it narrower than treating every trial as independent.
+ */
+export function clusteredWilson(
+  clusters: readonly { successes: number; n: number }[],
+  level = 0.95,
+): ClusteredProportionCI {
+  const G = clusters.length;
+  const y = clusters.reduce((s, c) => s + c.successes, 0);
+  const M = clusters.reduce((s, c) => s + c.n, 0);
+  const p = M > 0 ? y / M : NaN;
+  let deff = NaN;
+  if (G >= 2 && M > 0 && p > 0 && p < 1) {
+    const ss = clusters.reduce((s, c) => s + (c.successes - p * c.n) ** 2, 0);
+    const clusterVar = ((G / (G - 1)) * ss) / (M * M);
+    deff = clusterVar / ((p * (1 - p)) / M);
+  }
+  const floored = Number.isFinite(deff) ? Math.max(1, deff) : 1;
+  const effectiveN = M / floored;
+  const ci = M > 0 ? wilson(p * effectiveN, effectiveN, level) : wilson(0, 0, level);
+  return { ...ci, successes: y, n: M, p, clusters: G, designEffect: deff, effectiveN };
+}
+
 export interface DifferenceCI {
   /** p1 - p2 */
   estimate: number;

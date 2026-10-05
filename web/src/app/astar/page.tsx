@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { summarisePairedStudy } from "@/lib/analysis/astar-paired";
 import { loadAstarStudy } from "@/lib/data/load";
 import { ASTAR_STUDY_CONFIG } from "@/lib/data/reference-config";
-import { formatNumber, formatP, formatPct } from "@/lib/stats/format";
+import { formatNumber, formatPStatement, formatPct } from "@/lib/stats/format";
 
 export const metadata: Metadata = {
   title: "A* Lab",
@@ -64,8 +64,8 @@ export default function AstarPage() {
               {formatPct(o.euclidean.p)}: {pp(o.difference.estimate)} points{" "}
               {o.difference.estimate < 0 ? "fewer" : "more"} for Manhattan on the same boards
               (paired 95% CI {pp(dNear)} to {pp(dFar)}). Where only one heuristic was optimal, it
-              was Manhattan on {o.mcnemar.b} boards and Euclidean on {o.mcnemar.c} (exact McNemar p{" "}
-              {formatP(o.mcnemar.pValue)}).
+              was Manhattan on {o.mcnemar.b} boards and Euclidean on {o.mcnemar.c} (exact McNemar{" "}
+              {formatPStatement(o.mcnemar.pValue)}).
             </Finding>
             <Finding>
               <strong>Why: neither heuristic is admissible here.</strong> On this hex grid a step

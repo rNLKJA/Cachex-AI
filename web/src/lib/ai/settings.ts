@@ -118,6 +118,55 @@ export function loadAllKeys(
   return out;
 }
 
+/** The "remember on this device" box starts as the provider's saved key is stored. */
+export const initialRemember = (
+  provider: Provider,
+  savedKeys: Partial<Record<Provider, StoredKey>>,
+): boolean => savedKeys[provider]?.remembered ?? false;
+
+/** Everything the settings dialog holds until the visitor presses Save. */
+export interface SettingsDraft {
+  provider: Provider;
+  anthropicModel: string;
+  openaiModel: string;
+  /** Key typed into the dialog; empty keeps the saved key. */
+  key: string;
+  remember: boolean;
+  /** True only if the visitor changed the "remember" box for this provider. */
+  rememberTouched: boolean;
+}
+
+export interface SettingsSavePlan {
+  prefs: AiPrefs;
+  /** The key to write for the draft's provider, or null to leave key storage alone. */
+  key: { provider: Provider; key: string; remember: boolean } | null;
+}
+
+/**
+ * What pressing Save writes. Nothing is written before Save (closing the
+ * dialog discards the draft), and a saved key only moves between session and
+ * local storage when the visitor changed the box for that provider: a key
+ * saved for this tab is never persisted as a side effect of another change.
+ */
+export function planSettingsSave(
+  draft: SettingsDraft,
+  savedKeys: Partial<Record<Provider, StoredKey>>,
+): SettingsSavePlan {
+  const prefs: AiPrefs = {
+    provider: draft.provider,
+    anthropicModel: draft.anthropicModel || DEFAULT_ANTHROPIC_MODEL,
+    openaiModel: draft.openaiModel.trim() || DEFAULT_OPENAI_MODEL,
+  };
+  const typed = draft.key.trim();
+  if (typed)
+    return { prefs, key: { provider: draft.provider, key: typed, remember: draft.remember } };
+  const stored = savedKeys[draft.provider];
+  if (stored && draft.rememberTouched && stored.remembered !== draft.remember) {
+    return { prefs, key: { provider: draft.provider, key: stored.key, remember: draft.remember } };
+  }
+  return { prefs, key: null };
+}
+
 /** "sk-ant-…a1b2": enough to recognise a key without displaying it. */
 export function maskKey(key: string): string {
   const k = key.trim();

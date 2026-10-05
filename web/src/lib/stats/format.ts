@@ -35,3 +35,9 @@ export function formatP(p: number): string {
   if (p < 0.001) return "< 0.001";
   return p.toFixed(3);
 }
+
+/** A p-value as a statement: "p < 0.001" or "p = 0.012". */
+export function formatPStatement(p: number): string {
+  const v = formatP(p);
+  return v.startsWith("<") || v === "–" ? `p ${v}` : `p = ${v}`;
+}

@@ -9,10 +9,10 @@ import { describe, expect, it } from "vitest";
 import { bootstrap, bootstrapMean, pairedMeanDifference, stratifiedBootstrap } from "./bootstrap";
 import { type PairOutcome, eloExpected, fitBradleyTerry, toElo } from "./bradley-terry";
 import { geometricMean, mean, median, quantile, rankWithTies, sd, variance } from "./descriptive";
-import { formatP, formatPct, formatPctInterval, formatSigned } from "./format";
+import { formatP, formatPStatement, formatPct, formatPctInterval, formatSigned } from "./format";
 import { erf, normalCdf, normalQuantile, normalSf, zCritical } from "./normal";
 import { binomialCdf, mcnemarExact } from "./mcnemar";
-import { cohensH, newcombeDifference, wilson } from "./proportion";
+import { clusteredWilson, cohensH, newcombeDifference, wilson } from "./proportion";
 import { wilcoxonSignedRank } from "./wilcoxon";
 
 describe("normal distribution", () => {
@@ -108,6 +108,70 @@ describe("Wilson score interval", () => {
     }
     expect(cohensH(0.5, 0.5)).toBe(0);
     expect(cohensH(0.9, 0.5)).toBeCloseTo(0.9272952180016122, 12);
+  });
+});
+
+describe("Wilson interval for clustered trials (design effect)", () => {
+  // Reference: statsmodels 0.15 OLS(y, 1).fit(cov_type="cluster") gives the
+  // cluster-robust variance; deff = that / (p(1 - p) / N); then
+  // proportion_confint(p * n_eff, n_eff, method="wilson") with n_eff = N / max(1, deff).
+  it("widens the interval when trials bunch within clusters", () => {
+    const r = clusteredWilson([
+      { successes: 6, n: 6 },
+      { successes: 0, n: 6 },
+      { successes: 6, n: 6 },
+      { successes: 0, n: 6 },
+    ]);
+    expect(r).toMatchObject({ successes: 12, n: 24, clusters: 4, p: 0.5 });
+    expect(r.designEffect).toBeCloseTo(8, 10);
+    expect(r.effectiveN).toBeCloseTo(3, 10);
+    expect(r.lower).toBeCloseTo(0.12533447191026303, 10);
+    expect(r.upper).toBeCloseTo(0.874665528089737, 10);
+  });
+
+  it("matches statsmodels for uneven cluster sizes", () => {
+    const r = clusteredWilson([
+      { successes: 4, n: 6 },
+      { successes: 0, n: 5 },
+      { successes: 5, n: 7 },
+      { successes: 1, n: 6 },
+    ]);
+    expect(r.p).toBeCloseTo(0.4166666666666667, 12);
+    expect(r.designEffect).toBeCloseTo(3.0126984126984158, 9);
+    expect(r.effectiveN).toBeCloseTo(7.96628029504741, 9);
+    expect(r.lower).toBeCloseTo(0.16127252636125783, 9);
+    expect(r.upper).toBeCloseTo(0.7262831378100605, 9);
+  });
+
+  it("is never narrower than Wilson when clusters look alike", () => {
+    const even = clusteredWilson(Array.from({ length: 4 }, () => ({ successes: 3, n: 6 })));
+    expect(even.designEffect).toBeCloseTo(0, 12);
+    expect(even.effectiveN).toBe(24);
+    expect(even.lower).toBeCloseTo(wilson(12, 24).lower, 12);
+    // statsmodels: deff 0.893 (below 1), so the plain Wilson interval on 35 trials.
+    const spread = clusteredWilson([
+      { successes: 2, n: 7 },
+      { successes: 0, n: 5 },
+      { successes: 4, n: 9 },
+      { successes: 1, n: 6 },
+      { successes: 3, n: 8 },
+    ]);
+    expect(spread.designEffect).toBeCloseTo(0.8928571428571427, 9);
+    expect(spread.lower).toBeCloseTo(0.1632653623643469, 9);
+    expect(spread.upper).toBeCloseTo(0.4505493486318262, 9);
+  });
+
+  it("falls back to Wilson when the design effect cannot be estimated", () => {
+    const one = clusteredWilson([{ successes: 2, n: 6 }]);
+    expect(Number.isNaN(one.designEffect)).toBe(true);
+    expect(one.lower).toBeCloseTo(wilson(2, 6).lower, 12);
+    const none = clusteredWilson([
+      { successes: 0, n: 6 },
+      { successes: 0, n: 4 },
+    ]);
+    expect(none).toMatchObject({ successes: 0, n: 10, lower: 0 });
+    expect(Number.isNaN(none.designEffect)).toBe(true);
+    expect(clusteredWilson([]).n).toBe(0);
   });
 });
 
@@ -257,6 +321,9 @@ describe("formatting", () => {
     expect(formatSigned(3.21)).toBe("+3.2");
     expect(formatP(0.0004)).toBe("< 0.001");
     expect(formatP(0.0421)).toBe("0.042");
+    expect(formatPStatement(0.0004)).toBe("p < 0.001");
+    expect(formatPStatement(0.0123)).toBe("p = 0.012");
+    expect(formatPStatement(1)).toBe("p = 1.000");
   });
 });
 

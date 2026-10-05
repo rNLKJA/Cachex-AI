@@ -18,8 +18,11 @@ import {
   commentaryPrompt,
   commentaryRequest,
   commentaryToText,
+  forcedWinner,
   groundingCheck,
   mentionedNumbers,
+  parseCommentaryFacts,
+  recheckLoggedCommentary,
 } from "./commentator";
 import {
   LLM_PLAYER_MAX_TOKENS,
@@ -28,8 +31,10 @@ import {
   buildMovePrompt,
   completedSchedule,
   firstLegalAction,
+  type LlmGameRecord,
   legalMoves,
   llmGamesCsvRows,
+  pairWithLlm,
   playBaselineGame,
   playLlmGame,
   renderBoard,
@@ -43,12 +48,15 @@ import { OPENAI_URL, callOpenAI, strictJsonSchema } from "./openai";
 import { anthropicJsonSchema } from "./schema";
 import {
   DEFAULT_PREFS,
+  type SettingsDraft,
   forgetAllKeys,
   forgetKey,
+  initialRemember,
   loadAllKeys,
   loadKey,
   loadPrefs,
   maskKey,
+  planSettingsSave,
   saveKey,
   savePrefs,
 } from "./settings";
@@ -56,6 +64,7 @@ import { AiError, type FetchLike, type StructuredRequest } from "./types";
 import { Game } from "@/lib/cachex/game";
 import { tournamentMove } from "@/lib/tournament/agents";
 import { createRng, deriveSeed } from "@/lib/rng";
+import { wilson } from "@/lib/stats/proportion";
 
 const KEY = "sk-test-0123456789-SECRET";
 
@@ -526,6 +535,58 @@ describe("key and preference storage", () => {
   });
 });
 
+describe("settings dialog save", () => {
+  const OPENAI_KEY = "sk-openai-tab-only-0001";
+  // An OpenAI key saved for this tab only, an Anthropic key remembered on the device.
+  const saved = {
+    openai: { key: OPENAI_KEY, remembered: false },
+    anthropic: { key: KEY, remembered: true },
+  };
+  const draft = (over: Partial<SettingsDraft>): SettingsDraft => ({
+    provider: "anthropic",
+    anthropicModel: DEFAULT_PREFS.anthropicModel,
+    openaiModel: DEFAULT_PREFS.openaiModel,
+    key: "",
+    remember: false,
+    rememberTouched: false,
+    ...over,
+  });
+
+  it("never moves a tab-only key into local storage after a provider switch", () => {
+    // Open the dialog on Anthropic (box ticked), switch to OpenAI, press Save.
+    expect(initialRemember("anthropic", saved)).toBe(true);
+    const remember = initialRemember("openai", saved);
+    expect(remember).toBe(false);
+    const plan = planSettingsSave(draft({ provider: "openai", remember }), saved);
+    expect(plan.key).toBeNull();
+    expect(plan.prefs.provider).toBe("openai");
+    // Even a stale ticked box does nothing unless the visitor changed it.
+    expect(planSettingsSave(draft({ provider: "openai", remember: true }), saved).key).toBeNull();
+  });
+
+  it("moves a saved key only when the visitor changes the box for that provider", () => {
+    expect(
+      planSettingsSave(draft({ provider: "openai", remember: true, rememberTouched: true }), saved)
+        .key,
+    ).toEqual({ provider: "openai", key: OPENAI_KEY, remember: true });
+    expect(
+      planSettingsSave(
+        draft({ provider: "anthropic", remember: true, rememberTouched: true }),
+        saved,
+      ).key,
+    ).toBeNull(); // already remembered
+  });
+
+  it("saves a typed key for the selected provider with the box as shown", () => {
+    const plan = planSettingsSave(
+      draft({ provider: "openai", key: "  sk-new-0002  ", openaiModel: "  " }),
+      saved,
+    );
+    expect(plan.key).toEqual({ provider: "openai", key: "sk-new-0002", remember: false });
+    expect(plan.prefs.openaiModel).toBe(DEFAULT_PREFS.openaiModel);
+  });
+});
+
 describe("commentator", () => {
   const history = [place(1, 1), place(3, 2), place(2, 2), place(0, 3)];
   const decision = chooseAgentAction(5, history, "red", { fixedDepth: 2 });
@@ -607,7 +668,7 @@ describe("commentator", () => {
 
   it("passes a faithful explanation", () => {
     const result = groundingCheck(faithful, facts);
-    expect(result.checks.map((c) => c.ok)).toEqual([true, true, true, true]);
+    expect(result.checks.map((c) => c.ok)).toEqual([true, true, true, true, true]);
     expect(result.passed).toBe(true);
     expect(result.checks[3].detail).toBe("Says Red made the move, as in the input.");
     expect(commentaryToText(faithful)).toContain(faithful.summary);
@@ -672,6 +733,171 @@ describe("commentator", () => {
     );
     expect(endOfCaveat.passed).toBe(false);
     expect(endOfCaveat.checks[1].detail).toContain("4321");
+  });
+
+  it("says how the score relates to the features at each depth", () => {
+    expect(facts.search.forced_win).toBeNull();
+    expect(facts.score_scope).toContain("minimax value of a 2-ply search");
+    expect(facts.score_scope).toContain("not the sum of the feature contributions");
+    const shallow = chooseAgentAction(5, history, "red", { fixedDepth: 1 });
+    if (shallow.explanation.kind !== "search") throw new Error("expected a search");
+    const oneply = buildCommentaryFacts({
+      n: 5,
+      turn: 5,
+      colour: "red",
+      action: shallow.action,
+      explanation: shallow.explanation,
+    });
+    expect(oneply.score_scope).toContain("the feature contributions add up to it");
+    expect(Number(oneply.search.chosen_score)).toBeCloseTo(oneply.evaluation_total, 1);
+    expect(commentaryPrompt(facts).system).toContain("Read score_scope first");
+  });
+
+  it("accepts neutral for the shared empty-hex feature, and rejects favours Blue", () => {
+    const empty = facts.features_after_move.find((f) => f.feature === "empty")!;
+    expect(empty.counts_for).toBe("both players (shared)");
+    expect(empty.contribution).toBeGreaterThan(0);
+    expect(empty.note).toContain("same for every candidate move");
+    const cite = (effect: Commentary["key_factors"][number]["effect"]) =>
+      groundingCheck(
+        {
+          ...faithful,
+          key_factors: [
+            { feature: "empty", effect, evidence: `contribution ${empty.contribution}` },
+          ],
+        },
+        facts,
+      ).checks[0].ok;
+    expect(cite("neutral")).toBe(true);
+    expect(cite("favours_red")).toBe(true); // the sign of its contribution, not wrong either
+    expect(cite("favours_blue")).toBe(false);
+  });
+
+  it("flags a claimed forced win the search did not find, but not a denial", () => {
+    const claimed = groundingCheck(
+      { ...faithful, summary: `${faithful.summary} Red now has a forced win.` },
+      facts,
+    );
+    expect(claimed.passed).toBe(false);
+    expect(claimed.checks[4].detail).toBe("Claims a forced win, but the search did not find one.");
+    const denied = groundingCheck(
+      { ...faithful, caveat: "The search found no forced win for either side." },
+      facts,
+    );
+    expect(denied.checks[4].ok).toBe(true);
+  });
+
+  // Regression (review of PR #12): 4 × 4, seed 76, the original agent as Red
+  // against random. At depth 3 the search finds a forced win, while the
+  // one-ply features of the position after the move favour Blue (total -12).
+  // A reply explaining the move through the features alone used to pass.
+  describe("a forced win at depth 3 whose features favour Blue", () => {
+    const seed76: Action[] = [
+      place(1, 1),
+      STEAL,
+      place(0, 3),
+      place(3, 2),
+      place(3, 1),
+      place(3, 3),
+      place(1, 0),
+      place(1, 3),
+      place(0, 0),
+      place(2, 1),
+      place(0, 1),
+      place(0, 2),
+      place(2, 2),
+      place(1, 2),
+      place(0, 3),
+      place(2, 2),
+      place(3, 2),
+      place(2, 3),
+      place(2, 0),
+      place(2, 1),
+    ];
+    const d = chooseAgentAction(4, seed76, "red");
+    if (d.explanation.kind !== "search") throw new Error("expected a search");
+    const forced = buildCommentaryFacts({
+      n: 4,
+      turn: seed76.length + 1,
+      colour: "red",
+      action: d.action,
+      explanation: d.explanation,
+    });
+    const triangle = forced.features_after_move.find((f) => f.feature === "triangle")!;
+    const featuresOnly: Commentary = {
+      summary: `Red played ${forced.chosen_move}. Triangle formations contributed ${triangle.contribution}, and the evaluation total was ${forced.evaluation_total}.`,
+      key_factors: [
+        { feature: "triangle", effect: "favours_blue", evidence: `${triangle.contribution}` },
+      ],
+      caveat: "The facts do not say why the weights were chosen.",
+    };
+
+    it("tells the model the score is a forced win, not the features", () => {
+      expect(forced.search.depth).toBe(3);
+      expect(forced.search.chosen_score).toBe("+infinity (forced win for Red)");
+      expect(forced.search.forced_win).toBe("Red");
+      expect(forced.evaluation_total).toBe(-12);
+      expect(forced.score_scope).toContain("forced win for Red");
+      expect(forced.score_scope).toContain("not the feature breakdown");
+    });
+
+    it("fails a reply that explains the move through the features alone", () => {
+      const result = groundingCheck(featuresOnly, forced);
+      expect(result.checks.slice(0, 4).every((c) => c.ok)).toBe(true); // the old checks pass
+      expect(result.passed).toBe(false);
+      expect(result.checks[4]).toMatchObject({
+        label: "Forced wins reported as the search found them",
+        ok: false,
+      });
+    });
+
+    it("passes a reply that reports the forced win, and fails one that gives it to Blue", () => {
+      const reported = {
+        ...featuresOnly,
+        summary: `Red played ${forced.chosen_move} because the 3-ply search found a forced win for Red. The features describe the position right after the move and point the other way.`,
+      };
+      expect(groundingCheck(reported, forced).passed).toBe(true);
+      const wrongSide = groundingCheck(
+        { ...reported, summary: `${reported.summary} Blue can force a win elsewhere.` },
+        forced,
+      );
+      expect(wrongSide.checks[4].ok).toBe(false);
+      expect(wrongSide.checks[4].detail).toContain("Gives the forced win to Blue");
+    });
+
+    it("re-checks logged entries, including ones logged before forced_win existed", () => {
+      const oldSearch: Partial<typeof forced.search> = { ...forced.search };
+      delete oldSearch.forced_win;
+      const old = { ...forced, search: oldSearch } as typeof forced;
+      expect(forcedWinner(old)).toBe("Red");
+      const user = commentaryPrompt(old).user;
+      expect(parseCommentaryFacts(user)?.chosen_move).toBe(forced.chosen_move);
+      expect(recheckLoggedCommentary(user, featuresOnly)?.passed).toBe(false);
+      expect(recheckLoggedCommentary("What is 2 + 2?", featuresOnly)).toBeNull();
+      expect(recheckLoggedCommentary(user, { summary: 1 })).toBeNull();
+    });
+  });
+
+  it("stores the check with the call, and exports it", async () => {
+    const audit = new MemoryAuditStore();
+    const reply = { ...faithful, summary: `Blue played ${facts.chosen_move}.` };
+    const fetch = vi.fn(async () => json(anthropicMessage(JSON.stringify(reply))));
+    const res = await callStructured(
+      { provider: "anthropic", model: DEFAULT_ANTHROPIC_MODEL, apiKey: KEY },
+      commentaryRequest(facts),
+      { audit, fetch, check: (data) => groundingCheck(data, facts) },
+    );
+    expect(res.entry.grounding?.passed).toBe(false);
+    const [entry] = await audit.list();
+    expect(entry.grounding).toEqual(groundingCheck(reply, facts));
+    await audit.update(entry.id, { humanDecision: "accepted" });
+    const [accepted] = await audit.list();
+    const [header, row] = auditToCsv([accepted]).split("\r\n");
+    expect(header).toContain("grounding_passed,grounding_failures,human_decision");
+    expect(row).toContain(`false,"The right player made the move: Says Blue made a move`);
+    expect(row).toContain(",accepted,");
+    expect(JSON.parse(auditToJson([accepted])).entries[0].grounding.passed).toBe(false);
+    expect(JSON.stringify(accepted)).not.toContain(KEY);
   });
 
   it("extracts numbers at the end of sentences but not inside words", () => {
@@ -822,11 +1048,78 @@ describe("LLM as a player", () => {
     expect(summary.turns).toBe(rec.llmTurns + 1);
     expect(summary.firstAnswerRejected.successes).toBe(2);
     expect(summary.firstAnswerRejected.n).toBe(rec.llmTurns + 1);
+    expect(summary.firstAnswerRejected.clusters).toBe(2);
     expect(summary.illegalAttempts).toBe(4);
     expect(summary.attempts).toBe(rec.attempts + 3);
     const rows = llmGamesCsvRows([rec, lost]);
     expect(rows).toHaveLength(2);
     expect(rows[1]).toMatchObject({ llm_turns: 1, first_answer_illegal: 1, illegal_answers: 3 });
+  });
+
+  it("widens the rejected-answer interval when rejections bunch within games", () => {
+    const game = (index: number, llmTurns: number, rejected: number): LlmGameRecord => ({
+      index,
+      llmColour: index % 2 ? "blue" : "red",
+      seed: index,
+      n: 4,
+      result: "loss",
+      winner: index % 2 ? "red" : "blue",
+      turns: llmTurns * 2,
+      actions: [],
+      llmMoves: llmTurns,
+      llmTurns,
+      firstAnswerIllegal: rejected,
+      firstAnswerFormat: 0,
+      attempts: llmTurns + rejected,
+      illegalAttempts: rejected,
+      formatFailures: { malformed: 0, truncated: 0, refusal: 0 },
+      rejections: [],
+      latencyMs: [100],
+      inputTokens: 0,
+      outputTokens: 0,
+      usageReported: false,
+    });
+    // Rejections bunched in two of four games: 12 of 24 turns.
+    const games = [game(0, 6, 6), game(1, 6, 0), game(2, 6, 6), game(3, 6, 0)];
+    const r = summariseLlmGames(games).firstAnswerRejected;
+    expect(r).toMatchObject({ successes: 12, n: 24, clusters: 4, p: 0.5 });
+    // Clustering widens the interval well beyond a Wilson interval over 24 "independent"
+    // turns: design effect 8, so 3 effective turns (statsmodels reference in stats.test.ts).
+    const naive = wilson(12, 24);
+    expect(r.designEffect).toBeCloseTo(8, 9);
+    expect(r.upper - r.lower).toBeGreaterThan(2 * (naive.upper - naive.lower));
+    // Spread evenly, the games say the same as independent turns.
+    const even = summariseLlmGames([game(0, 6, 3), game(1, 6, 3), game(2, 6, 3), game(3, 6, 3)]);
+    expect(even.firstAnswerRejected.lower).toBeCloseTo(naive.lower, 12);
+    const one = summariseLlmGames([game(0, 6, 3)]).firstAnswerRejected;
+    expect(one.p).toBe(0.5);
+    expect(Number.isNaN(one.designEffect)).toBe(true); // one game: cannot be estimated
+  });
+
+  it("pairs the model with each baseline game by game", () => {
+    const records = [
+      { index: 0, result: "win" as const },
+      { index: 1, result: "loss" as const },
+      { index: 2, result: "win" as const },
+      { index: 3, result: "draw" as const },
+    ];
+    const baseline = {
+      outcomes: [
+        { index: 0, won: true },
+        { index: 1, won: true },
+        { index: 2, won: false },
+        { index: 3, won: true },
+        { index: 4, won: true }, // not played by the model: ignored
+      ],
+    };
+    const p = pairWithLlm(records, baseline)!;
+    expect(p).toMatchObject({ games: 4, llmOnly: 1, baselineOnly: 2 });
+    expect(p.mcnemar.pValue).toBe(1); // 1 vs 2 discordant games: binom.test(1, 3) in R
+    expect(pairWithLlm(records, { outcomes: [] })).toBeNull();
+    const s = scheduleGames(2, 9);
+    const random = summariseBaseline(4, s, "random")!;
+    expect(random.outcomes.map((o) => o.index)).toEqual([0, 1]);
+    expect(random.outcomes.filter((o) => o.won)).toHaveLength(random.wins.successes);
   });
 
   it("legal moves include STEAL only on Blue's first move", () => {

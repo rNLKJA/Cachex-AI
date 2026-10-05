@@ -3,7 +3,13 @@
  * call, and appends an audit entry (success or failure) before returning.
  */
 import { callAnthropic } from "./anthropic";
-import { type AuditEntry, type AuditStore, type HumanDecision, newAuditId } from "./audit-log";
+import {
+  type AuditEntry,
+  type AuditGrounding,
+  type AuditStore,
+  type HumanDecision,
+  newAuditId,
+} from "./audit-log";
 import { callOpenAI } from "./openai";
 import {
   AiError,
@@ -13,8 +19,14 @@ import {
   type StructuredResponse,
 } from "./types";
 
-export interface CallOptions {
+export interface CallOptions<T = unknown> {
   audit: AuditStore;
+  /**
+   * Automated check of a validated output, stored in the same audit entry
+   * (written once, with the output), so the log can show it next to the
+   * human decision.
+   */
+  check?: (data: T) => AuditGrounding;
   fetch?: FetchLike;
   signal?: AbortSignal;
   /** Decision recorded with the entry (default "pending": a human reviews it). */
@@ -33,13 +45,14 @@ export async function callStructured<T>(
   req: StructuredRequest<T>,
   {
     audit,
+    check,
     fetch,
     signal,
     humanDecision = "pending",
     context,
     now = () => performance.now(),
     clock = () => new Date(),
-  }: CallOptions,
+  }: CallOptions<T>,
 ): Promise<CallResult<T>> {
   const base = {
     id: newAuditId(),
@@ -69,6 +82,7 @@ export async function callStructured<T>(
       error: null,
       latencyMs: now() - started,
       usage: res.usage,
+      ...(check ? { grounding: check(res.data) } : {}),
     };
     await audit.add(entry);
     return { ...res, entry };

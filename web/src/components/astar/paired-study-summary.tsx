@@ -5,7 +5,7 @@
 import { EstimateCI, IntervalAxis, IntervalBar } from "@/components/stats/interval";
 import { ScrollTable } from "@/components/stats/scroll-table";
 import type { PairedStudySummary } from "@/lib/analysis/astar-paired";
-import { formatNumber, formatP, formatPct, formatSigned } from "@/lib/stats/format";
+import { formatNumber, formatPStatement, formatPct, formatSigned } from "@/lib/stats/format";
 
 const pctCI = (lo: number, hi: number) => `[${(lo * 100).toFixed(1)}, ${(hi * 100).toFixed(1)}]`;
 
@@ -35,7 +35,7 @@ export function PairedStudySummaryView({ summary }: { summary: PairedStudySummar
           />
           <Stat
             label="Wilcoxon signed-rank (two-sided)"
-            value={`p ${formatP(w.pValue)}`}
+            value={formatPStatement(w.pValue)}
             hint={`n = ${w.n} non-zero pairs (${w.zeros} ties dropped), W = ${formatNumber(w.statistic, 1)}${w.z !== null ? `, z = ${formatNumber(w.z, 2)}` : ""}`}
           />
           <Stat
@@ -120,7 +120,7 @@ export function PairedStudySummaryView({ summary }: { summary: PairedStudySummar
           />
           <Stat
             label="Exact McNemar test (two-sided)"
-            value={`p ${formatP(o.mcnemar.pValue)}`}
+            value={formatPStatement(o.mcnemar.pValue)}
             hint={`${o.mcnemar.discordant} discordant boards: optimal for Manhattan only on ${o.mcnemar.b}, Euclidean only on ${o.mcnemar.c}`}
           />
         </dl>

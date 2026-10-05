@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Check,
-  CircleAlert,
-  CircleCheck,
-  Loader2,
-  MessageSquareText,
-  Pencil,
-  X,
-} from "lucide-react";
+import { Check, Loader2, MessageSquareText, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
@@ -25,7 +17,6 @@ import {
 } from "@/lib/ai/commentator";
 import { isAiError } from "@/lib/ai/types";
 import type { Action, Colour } from "@/lib/cachex/types";
-import { cn } from "@/lib/utils";
 import { AiBadge } from "./ai-badge";
 import { useAi } from "./ai-provider";
 import {
@@ -34,6 +25,7 @@ import {
   setCommentaryState,
   subscribeCommentary,
 } from "./commentary-store";
+import { GroundingDetails } from "./grounding-details";
 
 const FEATURE_LABEL: Record<string, string> = {
   empty: "Empty hexes",
@@ -85,14 +77,16 @@ export function CommentatorPanel({
     onExplainStart?.();
     setState({ status: "loading" });
     try {
+      // The check is stored with the call, so the log shows it next to the decision.
       const res = await callStructured(credentials, commentaryRequest(facts), {
         audit,
+        check: (data) => groundingCheck(data, facts),
         context: { boardSize: n, turn, mover: colour },
       });
       setState({
         status: "done",
         commentary: res.data,
-        grounding: groundingCheck(res.data, facts),
+        grounding: res.entry.grounding ?? groundingCheck(res.data, facts),
         entryId: res.entry.id,
         model: res.model,
         decision: "pending",
@@ -189,30 +183,7 @@ export function CommentatorPanel({
             </div>
           )}
 
-          {/* Open when a check failed, so the reviewer sees what is wrong before deciding. */}
-          <details className="text-xs" open={!state.grounding.passed}>
-            <summary
-              className={cn(
-                "flex cursor-pointer items-center gap-1.5 font-medium",
-                state.grounding.passed ? "text-foreground" : "text-destructive",
-              )}
-            >
-              {state.grounding.passed ? (
-                <CircleCheck className="text-gold-ink size-3.5" />
-              ) : (
-                <CircleAlert className="size-3.5" />
-              )}
-              Grounding check {state.grounding.passed ? "passed" : "found problems"}
-            </summary>
-            <ul className="text-muted-foreground mt-1.5 space-y-1 pl-5">
-              {state.grounding.checks.map((c) => (
-                <li key={c.label} className="list-disc">
-                  <span className={c.ok ? "text-foreground" : "text-destructive"}>{c.label}:</span>{" "}
-                  {c.detail}
-                </li>
-              ))}
-            </ul>
-          </details>
+          <GroundingDetails grounding={state.grounding} />
 
           {state.decision === "pending" && editing === null ? (
             <div className="flex flex-wrap items-center gap-2">

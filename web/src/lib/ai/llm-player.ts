@@ -13,7 +13,10 @@
  * Either way the model is asked again (with the reason), up to `maxAttempts`;
  * after that it forfeits the game. The headline rate is per turn: the share
  * of the model's turns whose first answer was rejected, because retries on
- * the same turn are not independent trials. Colours alternate so the model
+ * the same turn are not independent trials. Turns within a game are not
+ * independent either (same model, prompt and evolving position), so its
+ * Wilson interval uses the effective number of turns after a design effect
+ * estimated from how much the rate varies between games. Colours alternate so the model
  * plays as many games as Red as it does as Blue, and the same schedule (seeds
  * and colours) is replayed with baseline players in the model's seat, giving
  * a side-by-side comparison on identical conditions.
@@ -24,7 +27,13 @@ import { Game } from "@/lib/cachex/game";
 import { type Action, type Colour, STEAL, formatAction, opponent, place } from "@/lib/cachex/types";
 import { deriveSeed } from "@/lib/rng";
 import { median } from "@/lib/stats/descriptive";
-import { type ProportionCI, wilson } from "@/lib/stats/proportion";
+import { type McNemarResult, mcnemarExact } from "@/lib/stats/mcnemar";
+import {
+  type ClusteredProportionCI,
+  type ProportionCI,
+  clusteredWilson,
+  wilson,
+} from "@/lib/stats/proportion";
 import { type AgentId } from "@/lib/tournament/agents";
 import { defaultTournamentMove, playTournamentGame } from "@/lib/tournament/play";
 import type { TokenUsage } from "./types";
@@ -363,6 +372,8 @@ export interface BaselineSummary {
   draws: number;
   /** Games the baseline played as Red (the rest as Blue). */
   asRed: number;
+  /** Per scheduled game, whether the baseline won it (for the paired comparison). */
+  outcomes: { index: number; won: boolean }[];
 }
 
 /**
@@ -391,7 +402,45 @@ export function summariseBaseline(
     wins: wilson(played.filter((g) => g.won).length, played.length),
     draws: played.filter((g) => g.draw).length,
     asRed: games.filter((g) => g.llmColour === "red").length,
+    outcomes: played.map((g) => ({ index: g.index, won: g.won })),
   };
+}
+
+export interface PairedWithLlm {
+  /** Games both played (same seed and colour). */
+  games: number;
+  /** Games the model won and the baseline did not. */
+  llmOnly: number;
+  /** Games the baseline won and the model did not. */
+  baselineOnly: number;
+  /** Exact McNemar test on the discordant games (b = llmOnly, c = baselineOnly). */
+  mcnemar: McNemarResult;
+}
+
+/**
+ * The model and a baseline on the same scheduled games: only the games where
+ * exactly one of them won say anything about the difference, so the
+ * comparison is the discordant counts and an exact McNemar test, not two
+ * overlapping intervals.
+ */
+export function pairWithLlm(
+  records: readonly Pick<LlmGameRecord, "index" | "result">[],
+  baseline: Pick<BaselineSummary, "outcomes">,
+): PairedWithLlm | null {
+  const baselineWon = new Map(baseline.outcomes.map((o) => [o.index, o.won]));
+  let games = 0;
+  let llmOnly = 0;
+  let baselineOnly = 0;
+  for (const r of records) {
+    const b = baselineWon.get(r.index);
+    if (b === undefined) continue;
+    games++;
+    const llm = r.result === "win";
+    if (llm && !b) llmOnly++;
+    if (b && !llm) baselineOnly++;
+  }
+  if (games === 0) return null;
+  return { games, llmOnly, baselineOnly, mcnemar: mcnemarExact(llmOnly, baselineOnly) };
 }
 
 export interface LlmEvaluationSummary {
@@ -408,8 +457,12 @@ export interface LlmEvaluationSummary {
    * Share of turns whose first answer was rejected (illegal move or no usable
    * move). Per turn, not per answer: retries after a rejection are strongly
    * correlated with it, so counting them would overstate the sample size.
+   * Turns within a game are correlated too, so the Wilson interval is on the
+   * effective number of turns (design effect from the between-game spread,
+   * never below 1); a plain Wilson interval over turns would treat them as
+   * independent.
    */
-  firstAnswerRejected: ProportionCI;
+  firstAnswerRejected: ClusteredProportionCI;
   firstAnswerIllegal: number;
   firstAnswerFormat: number;
   attempts: number;
@@ -438,7 +491,12 @@ export function summariseLlmGames(records: readonly LlmGameRecord[]): LlmEvaluat
     forfeits,
     forfeitRate: wilson(forfeits, records.length),
     turns,
-    firstAnswerRejected: wilson(firstIllegal + firstFormat, turns),
+    firstAnswerRejected: clusteredWilson(
+      records.map((r) => ({
+        successes: r.firstAnswerIllegal + r.firstAnswerFormat,
+        n: r.llmTurns,
+      })),
+    ),
     firstAnswerIllegal: firstIllegal,
     firstAnswerFormat: firstFormat,
     attempts: sum((r) => r.attempts),

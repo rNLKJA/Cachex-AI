@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ANTHROPIC_MODELS, DEFAULT_OPENAI_MODEL } from "@/lib/ai/models";
-import { maskKey } from "@/lib/ai/settings";
+import { PROVIDERS, initialRemember, maskKey, planSettingsSave } from "@/lib/ai/settings";
 import { PROVIDER_LABEL, type Provider } from "@/lib/ai/types";
 import { useAi } from "./ai-provider";
 
@@ -47,23 +47,35 @@ export function AiSettingsDialog({
 }
 
 function SettingsForm({ onDone }: { onDone: () => void }) {
-  const { prefs, setPrefs, storedKey, savedKeys, saveApiKey, forgetApiKeys } = useAi();
-  const otherSaved = (Object.keys(savedKeys) as Provider[]).filter((p) => p !== prefs.provider);
-  const anySaved = Object.keys(savedKeys).length > 0;
-  const [draftKey, setDraftKey] = useState("");
-  const [remember, setRemember] = useState(storedKey?.remembered ?? false);
-  const [showKey, setShowKey] = useState(false);
+  const { prefs, setPrefs, savedKeys, saveApiKey, forgetApiKeys } = useAi();
+  // A draft of every setting: nothing is written until Save, so closing the
+  // dialog (Escape, the close button, clicking outside) changes nothing.
+  const [provider, setDraftProvider] = useState<Provider>(prefs.provider);
+  const [anthropicModel, setAnthropicModel] = useState(prefs.anthropicModel);
   const [openaiModel, setOpenaiModel] = useState(prefs.openaiModel);
+  const [draftKey, setDraftKey] = useState("");
+  const [remember, setRemember] = useState(() => initialRemember(prefs.provider, savedKeys));
+  const [rememberTouched, setRememberTouched] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const storedKey = savedKeys[provider] ?? null;
+  const otherSaved = PROVIDERS.filter((p) => p !== provider && savedKeys[p]);
+  const anySaved = Object.keys(savedKeys).length > 0;
 
-  const setProvider = (provider: Provider) => {
-    setPrefs({ ...prefs, provider });
+  const setProvider = (next: Provider) => {
+    setDraftProvider(next);
     setDraftKey("");
+    // The box describes the selected provider's key, so it follows the switch.
+    setRemember(initialRemember(next, savedKeys));
+    setRememberTouched(false);
   };
 
   const save = () => {
-    setPrefs({ ...prefs, openaiModel: openaiModel.trim() || DEFAULT_OPENAI_MODEL });
-    if (draftKey.trim()) saveApiKey(draftKey, remember);
-    else if (storedKey && storedKey.remembered !== remember) saveApiKey(storedKey.key, remember);
+    const plan = planSettingsSave(
+      { provider, anthropicModel, openaiModel, key: draftKey, remember, rememberTouched },
+      savedKeys,
+    );
+    setPrefs(plan.prefs);
+    if (plan.key) saveApiKey(plan.key.provider, plan.key.key, plan.key.remember);
     onDone();
   };
 
@@ -83,9 +95,9 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
         <ShieldCheck className="text-gold-ink mt-0.5 size-4 shrink-0" aria-hidden />
         <p>
           Your key stays in this browser. Requests go{" "}
-          <strong>directly from your browser to {PROVIDER_LABEL[prefs.provider]}</strong>; this site
-          has no server that could see the key, and it is never logged or written to the AI audit
-          log. Calls are billed to your account by the provider.
+          <strong>directly from your browser to {PROVIDER_LABEL[provider]}</strong>; this site has
+          no server that could see the key, and it is never logged or written to the AI audit log.
+          Calls are billed to your account by the provider.
         </p>
       </div>
 
@@ -96,7 +108,7 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
           </span>
           <Segmented
             label="AI provider"
-            value={prefs.provider}
+            value={provider}
             onChange={setProvider}
             options={[
               { value: "anthropic", label: "Anthropic (default)" },
@@ -105,15 +117,12 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
           />
         </div>
 
-        {prefs.provider === "anthropic" ? (
+        {provider === "anthropic" ? (
           <div className="space-y-1.5">
             <Label htmlFor="ai-model" className="text-muted-foreground text-xs uppercase">
               Model
             </Label>
-            <Select
-              value={prefs.anthropicModel}
-              onValueChange={(v) => setPrefs({ ...prefs, anthropicModel: v })}
-            >
+            <Select value={anthropicModel} onValueChange={setAnthropicModel}>
               <SelectTrigger id="ai-model" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -147,7 +156,7 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
 
         <div className="space-y-1.5">
           <Label htmlFor="ai-key" className="text-muted-foreground text-xs uppercase">
-            {PROVIDER_LABEL[prefs.provider]} API key
+            {PROVIDER_LABEL[provider]} API key
           </Label>
           <div className="flex gap-2">
             <Input
@@ -175,7 +184,7 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
               ? storedKey.remembered
                 ? `A key (${maskKey(storedKey.key)}) is remembered on this device.`
                 : `A key (${maskKey(storedKey.key)}) is saved for this tab only.`
-              : `No ${PROVIDER_LABEL[prefs.provider]} key saved.`}
+              : `No ${PROVIDER_LABEL[provider]} key saved.`}
             {otherSaved.map((p) => (
               <span key={p} className="block">
                 {PROVIDER_LABEL[p]}: a key ({maskKey(savedKeys[p]!.key)}) is also{" "}
@@ -189,7 +198,10 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
           <Checkbox
             id="ai-remember"
             checked={remember}
-            onCheckedChange={(v) => setRemember(v === true)}
+            onCheckedChange={(v) => {
+              setRemember(v === true);
+              setRememberTouched(true);
+            }}
             className="mt-0.5"
           />
           <Label htmlFor="ai-remember" className="block text-sm leading-snug font-normal">
@@ -210,6 +222,7 @@ function SettingsForm({ onDone }: { onDone: () => void }) {
               forgetApiKeys();
               setDraftKey("");
               setRemember(false);
+              setRememberTouched(false);
             }}
             className="sm:mr-auto"
           >

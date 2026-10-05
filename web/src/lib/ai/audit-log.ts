@@ -4,7 +4,9 @@
  *
  * An entry records what was sent (system prompt, user prompt, schema name),
  * what came back, the provider and model, latency, token usage when the
- * provider reports it, and the human decision. It never contains the API key:
+ * provider reports it, the automated grounding check (for features that have
+ * one) and the human decision, so an exported log shows whether a reviewer
+ * accepted output that had failed its check. It never contains the API key:
  * entries are built from the request payload only, and the key is passed to
  * the provider adapters separately.
  */
@@ -20,6 +22,19 @@ export const DECISION_LABEL: Record<HumanDecision, string> = {
   rejected: "Rejected",
   "not-applicable": "n/a (automated evaluation)",
 };
+
+/** One automated check of an output against the input it was given. */
+export interface AuditCheck {
+  label: string;
+  ok: boolean;
+  detail: string;
+}
+
+/** The automated grounding check, stored with the call it checked. */
+export interface AuditGrounding {
+  passed: boolean;
+  checks: AuditCheck[];
+}
 
 export interface AuditEntry {
   id: string;
@@ -37,6 +52,8 @@ export interface AuditEntry {
   error: { kind: AiErrorKind; message: string } | null;
   latencyMs: number;
   usage: TokenUsage | null;
+  /** Automated grounding check of the output, when the feature has one (the commentator). */
+  grounding?: AuditGrounding;
   humanDecision: HumanDecision;
   /** The human's edited version, when the decision is "edited". */
   editedOutput?: string;
@@ -177,6 +194,13 @@ export function auditToCsv(entries: readonly AuditEntry[]): string {
     latency_ms: Math.round(e.latencyMs),
     input_tokens: e.usage?.inputTokens ?? null,
     output_tokens: e.usage?.outputTokens ?? null,
+    grounding_passed: e.grounding ? e.grounding.passed : null,
+    grounding_failures: e.grounding
+      ? e.grounding.checks
+          .filter((c) => !c.ok)
+          .map((c) => `${c.label}: ${c.detail}`)
+          .join(" | ")
+      : null,
     human_decision: e.humanDecision,
     decided_at: e.decidedAt ?? null,
     error_kind: e.error?.kind ?? null,
@@ -198,6 +222,8 @@ export function auditToCsv(entries: readonly AuditEntry[]): string {
     "latency_ms",
     "input_tokens",
     "output_tokens",
+    "grounding_passed",
+    "grounding_failures",
     "human_decision",
     "decided_at",
     "error_kind",

@@ -62,7 +62,8 @@ interface AiContextValue {
   storedKey: StoredKey | null;
   /** Every provider's stored key, so none is hidden when another provider is selected. */
   savedKeys: Partial<Record<Provider, StoredKey>>;
-  saveApiKey: (key: string, remember: boolean) => void;
+  /** Store a key for one provider (session storage, or local storage when remembered). */
+  saveApiKey: (provider: Provider, key: string, remember: boolean) => void;
   /** Remove every saved key, for every provider, from both storages. */
   forgetApiKeys: () => void;
   /** Ready-to-use credentials, or null when no key is set. */
@@ -95,14 +96,11 @@ export function AiProvider({ children }: { children: ReactNode }) {
     savePrefs(storages().local, next);
     emit();
   }, []);
-  const saveApiKey = useCallback(
-    (key: string, remember: boolean) => {
-      const { session, local } = storages();
-      saveKey(prefs.provider, key, remember, session, local);
-      emit();
-    },
-    [prefs.provider],
-  );
+  const saveApiKey = useCallback((provider: Provider, key: string, remember: boolean) => {
+    const { session, local } = storages();
+    saveKey(provider, key, remember, session, local);
+    emit();
+  }, []);
   const forgetApiKeys = useCallback(() => {
     const { session, local } = storages();
     forgetAllKeys(session, local);
