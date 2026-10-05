@@ -6,3 +6,8 @@ src/components/ui
 src/lib/agent/weights.json
 src/lib/data
 content/docs
+.showcase
+.playwright
+test-results
+playwright-report
+public/showcase

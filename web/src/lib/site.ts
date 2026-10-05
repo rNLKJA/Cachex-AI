@@ -25,4 +25,5 @@ export const NAV = [
   { href: "/tournament", label: "Tournament" },
   { href: "/llm-arena", label: "LLM Arena" },
   { href: "/methods", label: "Methods" },
+  { href: "/tour", label: "Tour" },
 ] as const;

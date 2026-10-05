@@ -40,6 +40,9 @@ export function SiteFooter() {
           <Link className="hover:text-foreground" href="/ai-log">
             AI audit log
           </Link>
+          <Link className="hover:text-foreground" href="/tour">
+            Guided tour
+          </Link>
           <Link className="hover:text-foreground" href="/#about">
             About
           </Link>

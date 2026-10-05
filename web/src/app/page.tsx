@@ -2,6 +2,7 @@ import {
   ArrowRight,
   Bot,
   BrainCircuit,
+  CirclePlay,
   FlaskConical,
   GitBranch,
   NotebookPen,
@@ -81,6 +82,22 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
+          <Link
+            href="/tour"
+            className="group border-gold/40 bg-gold/10 hover:bg-gold/20 focus-visible:ring-ring/50 mt-5 inline-flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-1.5 text-sm transition-colors outline-none focus-visible:ring-3"
+          >
+            <span className="bg-gold text-background flex size-7 items-center justify-center rounded-full">
+              <CirclePlay className="size-4" aria-hidden />
+            </span>
+            <span>
+              <span className="font-medium">New here? Take the guided tour</span>
+              <span className="text-muted-foreground"> · three short walkthroughs</span>
+            </span>
+            <ArrowRight
+              className="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </Link>
         </div>
         <figure className="relative mx-auto w-full max-w-xl">
           <div className="bg-gold/10 absolute inset-8 -z-10 rounded-full blur-3xl" aria-hidden />

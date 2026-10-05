@@ -1,0 +1,9 @@
+# Local-only output that `vercel deploy` would otherwise upload (it does not read .gitignore).
+# Showcase tour (pnpm showcase): raw recordings, Playwright output, local ffmpeg link
+.showcase
+.playwright
+test-results
+playwright-report
+# Test and TypeScript caches
+.vitest
+*.tsbuildinfo

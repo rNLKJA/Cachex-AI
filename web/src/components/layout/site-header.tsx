@@ -53,7 +53,8 @@ export function SiteHeader() {
           className="ml-auto flex min-w-0 [scrollbar-width:none] items-center gap-0 overflow-x-auto max-md:[mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] sm:ml-6 sm:gap-0.5"
         >
           {NAV.map((item) => {
-            const active = pathname.startsWith(item.href);
+            // Match whole path segments: /tournament must not light up /tour.
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}

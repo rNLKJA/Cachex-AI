@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Showcase tour output (pnpm showcase): raw media and Playwright artefacts.
+    ".showcase/**",
+    ".playwright/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

@@ -44,3 +44,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# showcase tour (pnpm showcase): raw recordings, Playwright output, local ffmpeg link
+/.showcase
+/.playwright
+/test-results
+/playwright-report
