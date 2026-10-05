@@ -6,10 +6,17 @@ import { runAgent } from "@/lib/agent/run-agent";
 import { place } from "@/lib/cachex/types";
 import { csvCell, toCsv } from "@/lib/csv";
 import { AGENT_IDS, AGENTS, tournamentMove } from "./agents";
-import { eloDifference, gamesCsv, summariseTournament, summaryCsv } from "./analyse";
+import {
+  eloDifference,
+  gamesCsv,
+  inScheduleOrder,
+  summariseTournament,
+  summaryCsv,
+} from "./analyse";
 import { type GameRecord, playTournamentGame } from "./play";
 import { buildSchedule, pairKey } from "./schedule";
 import { createRng } from "@/lib/rng";
+import { loadReferenceTournament } from "@/lib/data/load";
 
 describe("round-robin schedule", () => {
   const config = {
@@ -249,6 +256,37 @@ describe("tournament summary", () => {
     const only5 = summariseTournament(games, { reps: 50, seed: 1, sizes: [5] });
     expect(only5.games).toBe(1);
     expect(summariseTournament(games, { reps: 200, seed: 1 })).toEqual(summary);
+  });
+
+  it("gives the same intervals and CSV whatever order the games finish in", () => {
+    // Web Workers return games in the order they finish, which varies run to run.
+    const rng = createRng(99);
+    for (let trial = 0; trial < 3; trial++) {
+      const shuffled = [...games];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      expect(shuffled.map((g) => g.id)).not.toEqual(games.map((g) => g.id));
+      expect(summariseTournament(shuffled, { reps: 200, seed: 1 })).toEqual(summary);
+      expect(gamesCsv(shuffled)).toBe(gamesCsv(games));
+    }
+  });
+
+  it("leaves a run played in schedule order (the reference) in its own order", () => {
+    const ref = loadReferenceTournament().games;
+    expect(inScheduleOrder(ref).map((g) => g.id)).toEqual(ref.map((g) => g.id));
+    const schedule = buildSchedule({
+      agents: [...AGENT_IDS],
+      sizes: [4, 5],
+      rounds: 2,
+      seed: 7,
+    });
+    const played = schedule.map((spec) => record(spec.red, spec.blue, "red", spec.n, 0));
+    played.forEach((g, i) => Object.assign(g, { id: schedule[i].id, round: schedule[i].round }));
+    expect(inScheduleOrder([...played].reverse()).map((g) => g.id)).toEqual(
+      schedule.map((s) => s.id),
+    );
   });
 
   it("exports CSV", () => {

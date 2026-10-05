@@ -13,7 +13,7 @@ import { type CsvValue, toCsv } from "@/lib/csv";
 import { type BootstrapCI, bootstrapMean, stratifiedBootstrapVector } from "@/lib/stats/bootstrap";
 import { type PairOutcome, fitBradleyTerry, toElo } from "@/lib/stats/bradley-terry";
 import { type ProportionCI, wilson } from "@/lib/stats/proportion";
-import { AGENTS, type AgentId } from "./agents";
+import { AGENTS, AGENT_IDS, type AgentId } from "./agents";
 import { type GameRecord, winningAgent } from "./play";
 import { canonicalAgents, pairKey } from "./schedule";
 
@@ -111,11 +111,36 @@ function outcomesFor(records: readonly GameRecord[], index: Map<AgentId, number>
   });
 }
 
+/** Position of a game in `buildSchedule`'s order: size, pairing, round, then leg. */
+function scheduleKey(g: GameRecord): number[] {
+  const red = AGENT_IDS.indexOf(g.red.agent);
+  const blue = AGENT_IDS.indexOf(g.blue.agent);
+  return [g.n, Math.min(red, blue), Math.max(red, blue), g.round, red < blue ? 0 : 1];
+}
+
+/**
+ * The records in schedule order. Web Workers finish games in whatever order
+ * they finish, and the seeded bootstrap indexes into the record arrays, so
+ * without a fixed order the same seed would give different intervals (and a
+ * different CSV) from run to run. A run played one game at a time (the
+ * reference) is already in this order, so its numbers are unchanged.
+ */
+export function inScheduleOrder(records: readonly GameRecord[]): GameRecord[] {
+  const keyed = records.map((g) => ({ g, k: scheduleKey(g) }));
+  keyed.sort((x, y) => {
+    for (let i = 0; i < x.k.length; i++) if (x.k[i] !== y.k[i]) return x.k[i] - y.k[i];
+    return x.g.id < y.g.id ? -1 : x.g.id > y.g.id ? 1 : 0;
+  });
+  return keyed.map((x) => x.g);
+}
+
 export function summariseTournament(
   allRecords: readonly GameRecord[],
   { reps = 1000, seed = 4399, prior = 1, sizes }: SummariseOptions = {},
 ): TournamentSummary {
-  const records = sizes ? allRecords.filter((g) => sizes.includes(g.n)) : [...allRecords];
+  const records = inScheduleOrder(
+    sizes ? allRecords.filter((g) => sizes.includes(g.n)) : allRecords,
+  );
   const agents = canonicalAgents([...new Set(records.flatMap((g) => [g.red.agent, g.blue.agent]))]);
   const index = new Map(agents.map((id, i) => [id, i]));
   const anchor: AgentId | null = agents.includes("random") ? "random" : null;
@@ -272,7 +297,7 @@ export function eloDifference(
 
 /** One row per game, for CSV export. */
 export function gamesCsv(records: readonly GameRecord[]): string {
-  const rows = records.map((g) => ({
+  const rows = inScheduleOrder(records).map((g) => ({
     game_id: g.id,
     board_n: g.n,
     seed: g.seed,
