@@ -19,7 +19,7 @@ export function SiteHeader() {
       >
         Skip to content
       </a>
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2 rounded-md"
@@ -32,7 +32,7 @@ export function SiteHeader() {
         </Link>
         <nav
           aria-label="Main"
-          className="ml-auto flex min-w-0 items-center gap-0.5 overflow-x-auto sm:ml-6"
+          className="ml-auto flex min-w-0 items-center gap-0 overflow-x-auto sm:ml-6 sm:gap-0.5"
         >
           {NAV.map((item) => {
             const active = item.href === "/#about" ? false : pathname.startsWith(item.href);
@@ -42,7 +42,7 @@ export function SiteHeader() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "text-muted-foreground hover:bg-muted hover:text-foreground rounded-md px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors",
+                  "text-muted-foreground hover:bg-muted hover:text-foreground rounded-md px-2 py-1.5 text-sm whitespace-nowrap transition-colors sm:px-2.5",
                   active && "bg-muted text-foreground",
                 )}
               >
@@ -57,7 +57,7 @@ export function SiteHeader() {
             target="_blank"
             rel="noreferrer"
             aria-label="Source code on GitHub"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-8 items-center justify-center rounded-lg transition-colors"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden size-8 items-center justify-center rounded-lg transition-colors sm:inline-flex"
           >
             <GitHubIcon className="size-4" />
           </a>

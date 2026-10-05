@@ -59,7 +59,7 @@ export function MoveLog({
               {t.action[0] === "STEAL" ? "STEAL" : `(${t.action[1]}, ${t.action[2]})`}
             </span>
             {t.captures.length > 0 && (
-              <span className="bg-gold/15 text-gold rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium">
+              <span className="bg-gold/15 text-gold-ink rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium">
                 captured {t.captures.length}
               </span>
             )}

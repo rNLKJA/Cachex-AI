@@ -1,8 +1,13 @@
 import { Home } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { StaticBoard } from "@/components/landing/static-board";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+};
 
 export default function NotFound() {
   return (
@@ -10,7 +15,7 @@ export default function NotFound() {
       <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-20 text-center">
         <div className="w-48">
           <StaticBoard
-            label="An empty 3 by 3 board"
+            label="A 3 by 3 board with no path between the red and blue tiles"
             position={{
               n: 3,
               tiles: [

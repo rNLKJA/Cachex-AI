@@ -37,7 +37,7 @@ export function Field({
   children,
   hint,
 }: {
-  label: string;
+  label: ReactNode;
   htmlFor?: string;
   children: ReactNode;
   hint?: ReactNode;
@@ -60,6 +60,8 @@ export interface SegmentOption<T extends string> {
   value: T;
   label: ReactNode;
   ariaLabel?: string;
+  /** Tooltip for icon-only options. */
+  title?: string;
 }
 
 export function Segmented<T extends string>({
@@ -92,6 +94,7 @@ export function Segmented<T extends string>({
           key={o.value}
           value={o.value}
           aria-label={o.ariaLabel}
+          title={o.title}
           className="data-[state=on]:border-gold/60 data-[state=on]:bg-gold/15 data-[state=on]:text-foreground flex-1 gap-1.5 data-[state=on]:font-semibold"
         >
           {o.label}

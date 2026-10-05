@@ -19,6 +19,14 @@ export function EvalTrend({ values }: { values: readonly number[] }) {
   const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   const last = values.at(-1) ?? 0;
 
+  if (values.length < 2) {
+    return (
+      <p className="text-muted-foreground flex h-24 items-center justify-center rounded-xl border border-dashed px-4 text-center text-sm">
+        The trend appears after the first move.
+      </p>
+    );
+  }
+
   return (
     <figure className="space-y-2">
       <svg
@@ -43,26 +51,22 @@ export function EvalTrend({ values }: { values: readonly number[] }) {
           className="stroke-border"
           strokeDasharray="3 3"
         />
-        {values.length > 1 && (
-          <>
-            <polyline
-              points={points}
-              fill="none"
-              clipPath={`url(#${id}-top)`}
-              style={{ stroke: "var(--player-red)" }}
-              strokeWidth={2}
-              strokeLinejoin="round"
-            />
-            <polyline
-              points={points}
-              fill="none"
-              clipPath={`url(#${id}-bottom)`}
-              style={{ stroke: "var(--player-blue)" }}
-              strokeWidth={2}
-              strokeLinejoin="round"
-            />
-          </>
-        )}
+        <polyline
+          points={points}
+          fill="none"
+          clipPath={`url(#${id}-top)`}
+          style={{ stroke: "var(--player-red)" }}
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+        <polyline
+          points={points}
+          fill="none"
+          clipPath={`url(#${id}-bottom)`}
+          style={{ stroke: "var(--player-blue)" }}
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
         <circle
           cx={x(values.length - 1)}
           cy={y(last)}

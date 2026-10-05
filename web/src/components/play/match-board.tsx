@@ -3,6 +3,7 @@
 import { HexBoard } from "@/components/board/hex-board";
 import type { MatchView } from "@/lib/cachex/match";
 import type { Colour } from "@/lib/cachex/types";
+import { cn } from "@/lib/utils";
 
 export function MatchBoard({
   n,
@@ -11,6 +12,7 @@ export function MatchBoard({
   humanColour,
   onPlace,
   showCoords,
+  className,
 }: {
   n: number;
   view: MatchView;
@@ -19,6 +21,7 @@ export function MatchBoard({
   humanColour: Colour | null;
   onPlace?: (r: number, q: number) => void;
   showCoords?: boolean;
+  className?: string;
 }) {
   const { game } = view;
   const result = game.result;
@@ -33,7 +36,10 @@ export function MatchBoard({
       n={n}
       cells={view.cells}
       label={label}
-      onCellActivate={humanColour && onPlace ? onPlace : undefined}
+      // Keep the board interactive for the whole match whenever a human is
+      // playing, so keyboard focus stays on the board while the agent replies;
+      // cells are only actionable on the human's turn.
+      onCellActivate={onPlace}
       isCellInteractive={(r, q) => humanColour !== null && game.isLegal(["PLACE", r, q])}
       describeCell={(r, q) =>
         game.isForbiddenOpening(r, q) ? "centre is not allowed on the first move" : undefined
@@ -44,7 +50,7 @@ export function MatchBoard({
       moveKey={moveCount}
       winning={view.winning}
       showCoords={showCoords}
-      className="drop-shadow-[0_20px_40px_rgb(0_0_0/0.25)]"
+      className={cn("drop-shadow-[0_20px_40px_rgb(0_0_0/0.25)]", className)}
     />
   );
 }

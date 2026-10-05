@@ -8,12 +8,13 @@ import { sameAction } from "@/lib/cachex/types";
 import { cn } from "@/lib/utils";
 import { ColourDot, colourName } from "./primitives";
 
+/** Round to the one decimal place shown in the UI (infinities pass through). */
+const roundScore = (s: number) => (Number.isFinite(s) ? Math.round(s * 10) / 10 + 0 : s);
+
+const hasTies = (scores: number[]) => new Set(scores).size < scores.length;
+
 export const formatScore = (s: number) =>
-  s === Infinity
-    ? "+∞"
-    : s === -Infinity
-      ? "−∞"
-      : (Math.round(s * 10) / 10 + 0).toLocaleString("en-AU");
+  s === Infinity ? "+∞" : s === -Infinity ? "−∞" : roundScore(s).toLocaleString("en-AU");
 
 const actionLabel = (a: Action) => (a[0] === "STEAL" ? "STEAL" : `(${a[1]}, ${a[2]})`);
 
@@ -95,9 +96,14 @@ export function ExplainPanel({
     return Number(sameAction(b.action, action)) - Number(sameAction(a.action, action));
   });
   const top = ordered.slice(0, 6);
-  const goodness = top.map((c) => sign * c.score).filter(Number.isFinite);
+  // Bars compare scores at the precision they are displayed: the original
+  // agent multiplies each score by a random 1 or 1 + 1e-5 to break ties, and
+  // those ~1e-4 differences must not look like real gaps.
+  const shownGoodness = (score: number) => sign * roundScore(score);
+  const goodness = top.map((c) => shownGoodness(c.score)).filter(Number.isFinite);
   const lo = Math.min(...goodness);
   const hi = Math.max(...goodness);
+  const allTied = goodness.length === 0 || hi - lo < 0.05;
 
   return (
     <div className="space-y-4">
@@ -115,9 +121,9 @@ export function ExplainPanel({
         <ul className="space-y-1.5">
           {top.map((c) => {
             const chosen = sameAction(c.action, action);
-            const g = sign * c.score;
+            const g = shownGoodness(c.score);
             const v = Number.isFinite(g) ? g : g > 0 ? hi : lo;
-            const width = hi === lo ? "100%" : `${15 + ((v - lo) / (hi - lo)) * 85}%`;
+            const width = allTied ? "100%" : `${15 + ((v - lo) / (hi - lo)) * 85}%`;
             return (
               <li
                 key={actionLabel(c.action)}
@@ -140,6 +146,11 @@ export function ExplainPanel({
             );
           })}
         </ul>
+        {top.length > 1 && hasTies(top.map((c) => roundScore(c.score))) && (
+          <p className="text-muted-foreground mt-2 text-xs">
+            Equal scores are broken by the original agent&apos;s random ×(1 + 10⁻⁵) bias.
+          </p>
+        )}
       </div>
 
       <div>
@@ -192,8 +203,8 @@ export function ExplainPanel({
                   <td
                     className={cn(
                       "py-1.5 text-right font-mono tabular-nums",
-                      f.contribution > 0 && "text-red-player",
-                      f.contribution < 0 && "text-blue-player",
+                      f.contribution > 0 && "text-red-player-ink",
+                      f.contribution < 0 && "text-blue-player-ink",
                     )}
                   >
                     {f.contribution > 0 ? "+" : ""}

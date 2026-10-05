@@ -139,6 +139,27 @@ export function HexBoard({
             />
           </filter>
         ))}
+        {/* Goal-edge glow: the zigzag edges have very flat bounding boxes, so
+            the default objectBoundingBox region would clip the blur into a
+            hard rectangle. Use the whole board (plus margin) as the region. */}
+        {(["red", "blue"] as const).map((c) => (
+          <filter
+            key={c}
+            id={`${uid}-edge-${c}`}
+            filterUnits="userSpaceOnUse"
+            x={-RADIUS * 2}
+            y={-RADIUS * 2}
+            width={geo.width + RADIUS * 4}
+            height={geo.height + RADIUS * 4}
+          >
+            <feDropShadow
+              dx="0"
+              dy="0"
+              stdDeviation={RADIUS * 0.28}
+              style={{ floodColor: `var(--player-${c})`, floodOpacity: "var(--glow-strength)" }}
+            />
+          </filter>
+        ))}
         <filter id={`${uid}-gold`} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow
             dx="0"
@@ -174,7 +195,7 @@ export function HexBoard({
           strokeWidth={edgeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
-          filter={`url(#${uid}-glow-${colour})`}
+          filter={`url(#${uid}-edge-${colour})`}
           opacity={0.9}
         />
       ))}
@@ -310,7 +331,7 @@ export function HexBoard({
                   cx={c.x}
                   cy={c.y}
                   r={RADIUS * 0.5}
-                  style={{ fill: "var(--background)", stroke: "var(--gold)" }}
+                  style={{ fill: "var(--background)", stroke: "var(--gold-ink)" }}
                   strokeWidth={1.2}
                 />
                 <text
@@ -319,7 +340,7 @@ export function HexBoard({
                   textAnchor="middle"
                   dominantBaseline="central"
                   className="font-mono"
-                  style={{ fill: "var(--gold)", fontSize: RADIUS * 0.62, fontWeight: 700 }}
+                  style={{ fill: "var(--gold-ink)", fontSize: RADIUS * 0.62, fontWeight: 700 }}
                 >
                   {marker === "start" ? "S" : "G"}
                 </text>

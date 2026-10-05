@@ -72,11 +72,18 @@ function runSafe(board: AStarBoard, heuristic: Heuristic, block: BlockMode): Out
 const samePath = (a: readonly Coord[], b: readonly Coord[]) =>
   a.length === b.length && a.every((c, i) => c[0] === b[i][0] && c[1] === b[i][1]);
 
+/** Sizes offered in the picker (3-15), plus the current size if a loaded JSON used another. */
+const sizeOptions = (current: number) =>
+  [...new Set([...Array.from({ length: 13 }, (_, i) => i + 3), current])].sort((x, y) => x - y);
+
 export function AstarLab() {
   const [board, setBoard] = useState<AStarBoard>(() => presetBoard(DEFAULT_PRESET));
   const [presetId, setPresetId] = useState<string | null>(DEFAULT_PRESET.id);
   const [tool, setTool] = useState<Tool>("blue");
-  const [heuristic, setHeuristic] = useState<Heuristic>("euclidean");
+  // Open in the configuration the recorded sample output was produced with.
+  const [heuristic, setHeuristic] = useState<Heuristic>(
+    DEFAULT_PRESET.originalHeuristic ?? "euclidean",
+  );
   const [block, setBlock] = useState<BlockChoice>("any");
   const [frame, setFrame] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -232,12 +239,13 @@ export function AstarLab() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="bg-card/40 rounded-3xl border p-2 sm:p-6">
             <HexBoard
               n={board.n}
               cells={board.cells}
               label={`A* board ${board.n} by ${board.n}. Tool: ${tool}. Use arrow keys and Enter to edit.`}
+              className="lg:max-h-[calc(100svh-17rem)]"
               onCellActivate={onCell}
               overlays={overlays}
               labels={labels}
@@ -273,7 +281,8 @@ export function AstarLab() {
             <div className="ml-auto flex min-w-48 flex-1 items-center gap-3 sm:max-w-64">
               <span className="text-muted-foreground text-xs whitespace-nowrap">Speed</span>
               <Slider
-                aria-label="Milliseconds per expansion"
+                aria-label="Animation speed"
+                getValueText={(v) => `${840 - v} ms per expansion`}
                 min={40}
                 max={800}
                 step={20}
@@ -365,15 +374,32 @@ export function AstarLab() {
                       value: "blue",
                       label: <ColourDot colour="blue" />,
                       ariaLabel: "Paint blue tile",
+                      title: "Paint Blue tiles",
                     },
                     {
                       value: "red",
                       label: <ColourDot colour="red" />,
                       ariaLabel: "Paint red tile",
+                      title: "Paint Red tiles",
                     },
-                    { value: "erase", label: <Eraser className="size-4" />, ariaLabel: "Erase" },
-                    { value: "start", label: <Flag className="size-4" />, ariaLabel: "Move start" },
-                    { value: "goal", label: <Target className="size-4" />, ariaLabel: "Move goal" },
+                    {
+                      value: "erase",
+                      label: <Eraser className="size-4" />,
+                      ariaLabel: "Erase",
+                      title: "Erase",
+                    },
+                    {
+                      value: "start",
+                      label: <Flag className="size-4" />,
+                      ariaLabel: "Move start",
+                      title: "Move start",
+                    },
+                    {
+                      value: "goal",
+                      label: <Target className="size-4" />,
+                      ariaLabel: "Move goal",
+                      title: "Move goal",
+                    },
                   ]}
                 />
               </Field>
@@ -387,7 +413,7 @@ export function AstarLab() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 13 }, (_, i) => i + 3).map((n) => (
+                      {sizeOptions(board.n).map((n) => (
                         <SelectItem key={n} value={String(n)}>
                           {n} × {n}
                         </SelectItem>
@@ -431,6 +457,12 @@ export function AstarLab() {
           <Panel title="Output">
             <p className="text-muted-foreground mb-2 font-mono text-xs">
               $ python -m search input.json{BLOCK_CLI[block]}
+              {heuristic === "manhattan" && (
+                <span className="opacity-70">
+                  {" "}
+                  # the CLI uses Euclidean; Manhattan as in the notebook
+                </span>
+              )}
             </p>
             <pre className="bg-background/60 max-h-52 overflow-auto rounded-lg border p-3 font-mono text-xs leading-relaxed">
               {outcome.ok ? (view?.done ? cli : "…searching") : "error"}
@@ -555,7 +587,7 @@ function CompareTable({
             <td
               className={cn(
                 "py-1.5 text-right font-mono tabular-nums",
-                row.m < row.e && "text-gold font-semibold",
+                row.m < row.e && "text-gold-ink font-semibold",
               )}
             >
               {row.m}
@@ -563,7 +595,7 @@ function CompareTable({
             <td
               className={cn(
                 "py-1.5 text-right font-mono tabular-nums",
-                row.e < row.m && "text-gold font-semibold",
+                row.e < row.m && "text-gold-ink font-semibold",
               )}
             >
               {row.e}
@@ -580,13 +612,13 @@ function Legend() {
   return (
     <div className="bg-card/40 text-muted-foreground flex flex-wrap gap-x-5 gap-y-2 rounded-2xl border p-4 text-sm">
       <span className={item}>
-        <span className="border-gold text-gold flex size-5 items-center justify-center rounded-full border font-mono text-[0.6rem] font-bold">
+        <span className="border-gold text-gold-ink flex size-5 items-center justify-center rounded-full border font-mono text-[0.6rem] font-bold">
           S
         </span>
         Start
       </span>
       <span className={item}>
-        <span className="border-gold text-gold flex size-5 items-center justify-center rounded-full border font-mono text-[0.6rem] font-bold">
+        <span className="border-gold text-gold-ink flex size-5 items-center justify-center rounded-full border font-mono text-[0.6rem] font-bold">
           G
         </span>
         Goal

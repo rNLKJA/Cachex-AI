@@ -45,6 +45,8 @@ export function SpectateClient() {
     if (changes.blue !== undefined) setBlue(changes.blue);
     setSeed(changes.seed ?? seed);
     setSelected(null);
+    // A finished game ends auto-play: restarting from it starts paused.
+    if (over) setPlaying(false);
     match.reset();
   };
 
@@ -69,7 +71,7 @@ export function SpectateClient() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <MatchStatus
               game={game}
               kinds={config}
@@ -84,10 +86,15 @@ export function SpectateClient() {
                 moveCount={match.actions.length}
                 humanColour={null}
                 showCoords={showCoords}
+                className="lg:max-h-[calc(100svh-22rem)]"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => setPlaying((p) => !p)} disabled={over} aria-pressed={playing}>
+              <Button
+                onClick={() => setPlaying((p) => !p)}
+                disabled={over}
+                aria-pressed={playing && !over}
+              >
                 {playing && !over ? <Pause /> : <Play />} {playing && !over ? "Pause" : "Play"}
               </Button>
               <Button
@@ -142,10 +149,19 @@ export function SpectateClient() {
                     options={AGENT_OPTIONS}
                   />
                 </Field>
-                <Field label={`Move delay: ${delay} ms`} htmlFor="speed">
+                <Field
+                  label={
+                    <>
+                      Move delay:{" "}
+                      <span className="font-mono tracking-normal normal-case">{delay} ms</span>
+                    </>
+                  }
+                  htmlFor="speed"
+                >
                   <Slider
                     id="speed"
-                    aria-label="Move delay in milliseconds"
+                    aria-label="Move delay"
+                    getValueText={(v) => `${v} ms`}
                     min={0}
                     max={2000}
                     step={50}

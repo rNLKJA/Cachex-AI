@@ -42,6 +42,10 @@
   --color-plate: var(--plate);
   --color-hex: var(--hex);
   --color-gold: var(--gold);
+  /* text-safe variants (WCAG AA on card/background); use for text only */
+  --color-gold-ink: var(--gold-ink);
+  --color-red-player-ink: var(--player-red-ink);
+  --color-blue-player-ink: var(--player-blue-ink);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -133,6 +137,9 @@
   --player-blue-hi: oklch(0.7 0.13 245);
   --player-blue-lo: oklch(0.46 0.15 258);
   --gold: oklch(0.7 0.14 75);
+  --gold-ink: oklch(0.5 0.11 70);
+  --player-red-ink: oklch(0.54 0.2 25);
+  --player-blue-ink: oklch(0.5 0.16 252);
   --plate: oklch(0.89 0.018 80);
   --hex: oklch(0.955 0.01 85);
   --hex-hi: oklch(0.99 0.005 85);
@@ -176,6 +183,9 @@
   --player-blue-hi: oklch(0.8 0.11 240);
   --player-blue-lo: oklch(0.56 0.16 255);
   --gold: oklch(0.84 0.12 82);
+  --gold-ink: var(--gold);
+  --player-red-ink: var(--player-red);
+  --player-blue-ink: var(--player-blue);
   --plate: oklch(0.12 0.022 278);
   --hex: oklch(0.255 0.03 278);
   --hex-hi: oklch(0.3 0.032 278);

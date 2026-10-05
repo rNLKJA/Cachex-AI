@@ -78,7 +78,7 @@ export function PlayClient() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="lg:hidden">{status}</div>
             <div className="bg-card/40 rounded-3xl border p-2 sm:p-6">
               <MatchBoard
@@ -88,6 +88,7 @@ export function PlayClient() {
                 humanColour={humanToMove}
                 onPlace={(r, q) => match.play(place(r, q))}
                 showCoords={showCoords}
+                className="lg:max-h-[calc(100svh-17rem)]"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
