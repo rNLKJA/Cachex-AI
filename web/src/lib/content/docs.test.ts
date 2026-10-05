@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DOCS_DIR, listDecisions, parseTitle, withoutTitle } from "./docs";
+import { DOCS_DIR, listDecisions, parseTitle, supersededBy, withoutTitle } from "./docs";
 
 const ROOT_DOCS = path.resolve(process.cwd(), "..", "docs");
 
@@ -26,7 +26,14 @@ describe("rendered docs", () => {
 
   it("lists decision records in order with ids and titles", () => {
     const list = listDecisions();
-    expect(list.map((d) => d.id)).toEqual(["DR-001", "DR-002", "DR-003", "DR-004"]);
+    expect(list.map((d) => d.id)).toEqual([
+      "DR-001",
+      "DR-002",
+      "DR-003",
+      "DR-004",
+      "DR-005",
+      "DR-006",
+    ]);
     for (const d of list) {
       expect(d.title.length).toBeGreaterThan(5);
       expect(d.slug.startsWith(d.id)).toBe(true);
@@ -48,6 +55,14 @@ describe("rendered docs", () => {
       // The decision is stated first, before the context.
       expect(md.indexOf("**Decision:**")).toBeLessThan(md.indexOf("## Context"));
     }
+  });
+
+  it("links a record to the later records that supersede it", () => {
+    expect(supersededBy("DR-002").map((d) => d.id)).toEqual(["DR-005"]);
+    expect(supersededBy("DR-004").map((d) => d.id)).toEqual(["DR-005"]);
+    // DR-004 mentions DR-002 but supersedes nothing.
+    expect(supersededBy("DR-001")).toEqual([]);
+    expect(supersededBy("DR-005")).toEqual([]);
   });
 
   it("parses titles", () => {

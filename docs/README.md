@@ -11,6 +11,9 @@ Decision records:
 - [DR-001: Evaluation function features and weights](decisions/DR-001-evaluation-function.md)
 - [DR-002: Dynamic depth allocation for minimax](decisions/DR-002-dynamic-depth-allocation.md)
 - [DR-003: Port to TypeScript and run in Web Workers, verified by parity tests](decisions/DR-003-typescript-port-web-workers.md)
+- [DR-004: Compare two methods by their paired difference](decisions/DR-004-paired-comparisons.md)
+- [DR-005: Report uncertainty at the unit that was sampled](decisions/DR-005-report-at-the-sampled-unit.md)
+- [DR-006: Ground commentary in what the search found, and keep the check with the decision](decisions/DR-006-grounded-commentary-audit.md)
 
 These files are rendered on the website under `/methods`. The site reads a synced copy in
 `web/content/docs/` (the Vercel build only sees `web/`); run `pnpm sync-docs` in `web/` after

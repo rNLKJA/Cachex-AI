@@ -37,5 +37,23 @@ export function listDecisions(): DecisionRecord[] {
     });
 }
 
+/**
+ * Later records that supersede this one, in whole or in part: their
+ * "**Supersedes:**" line names it (and does not start with "nothing").
+ * Past records are never edited, so the link is shown on the old record's
+ * page from the new record's side.
+ */
+export function supersededBy(id: string): DecisionRecord[] {
+  return listDecisions().filter((d) => {
+    if (d.id <= id) return false;
+    const line =
+      readDoc(path.join("decisions", `${d.slug}.md`))
+        .split("\n")
+        .find((l) => l.includes("**Supersedes:**")) ?? "";
+    const claim = line.split("**Supersedes:**")[1]?.split("**Superseded by:**")[0]?.trim() ?? "";
+    return !/^nothing\b/i.test(claim) && new RegExp(`\\b${id}\\b`).test(claim);
+  });
+}
+
 /** The markdown without its top-level heading (the page renders its own). */
 export const withoutTitle = (markdown: string) => markdown.replace(/^#\s+.*\n+/, "");

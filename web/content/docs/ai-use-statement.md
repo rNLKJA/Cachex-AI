@@ -13,7 +13,10 @@ not a claim of compliance or certification with any of them.
    a move, you can ask a model to explain it in plain English. The model receives only the
    agent's own numbers for that move: board size, turn, the move, search depth, nodes visited,
    the top candidate scores and the six evaluation features with their weights and
-   contributions. It is instructed to use nothing else.
+   contributions, plus a sentence saying what the score means at that depth: the features
+   describe the position right after the move, so they explain the score only for a one-ply
+   search, and a forced win found by a deeper search is the reason for the move, not the
+   features. It is instructed to use nothing else.
 2. **LLM as a player** (on `/llm-arena`). A model plays a few short games against the original
    agent. Each turn it receives the rules, the board, the move history and the list of legal
    moves, and returns one move as JSON. Answers are scored the same way for both providers, under
@@ -44,16 +47,20 @@ processes the request under its own terms and bills your account.
 
 - Every model output on the site is labelled **AI-generated** with the model name.
 - Commentary is checked automatically against the facts it was given: cited feature
-  directions must match the sign of their contribution, every number and move it mentions
-  must appear in the input, and if it says which player moved, that must be the player who did.
-  The result of that check is shown next to the text.
+  directions must match the sign of their contribution (a feature shared by both players may be
+  called neutral), every number and move it mentions must appear in the input, if it says which
+  player moved that must be the player who did, and a forced win must be reported when the search
+  found one and never claimed when it did not. The result of that check is shown next to the
+  text, opened when a check failed, and stored with the call in the audit log.
 - You review each commentary and record a decision: accept, edit (your edit is stored next to
   the original) or reject. Commentary you did not review where it appeared (for example because
-  the game moved on) stays "awaiting review" and can be decided later on `/ai-log`.
+  the game moved on) stays "awaiting review" and can be decided later on `/ai-log`, where the
+  stored check is shown above the decision buttons.
 - Every call, successful or not, is recorded in the AI audit log at `/ai-log` with its
   timestamp, feature, provider, model, exact input, output (including the raw reply when it
   failed validation, was cut off or was refused), latency, token usage when the provider reports
-  it, and your decision. Automated evaluation calls (the LLM player) are
+  it, the grounding check result, and your decision, so the record shows when commentary was
+  accepted despite a failed check. Automated evaluation calls (the LLM player) are
   marked "n/a". The log stays in your browser and can be exported as JSON or CSV, or cleared.
 
 ## Known limitations
