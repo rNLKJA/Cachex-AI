@@ -49,7 +49,7 @@ Agents and the heuristic study run in **Web Workers**, so the board stays respon
 
 ### Key results (from the original Python)
 
-- The `_4399` agent beat the original random agent in **139 of 160 games** (87%) across
+- The `_4399` agent beat the original random agent in **144 of 160 games** (90%) across
   board sizes 4–7, playing both colours (`scripts/benchmark_agent.py`).
 - A\* reproduces the recorded outputs for both sample inputs (paths of **8** and **13** cells).
 - The TypeScript port matches the original **exactly**: paths and node-expansion counts for 184 A\*
@@ -131,6 +131,9 @@ uv run scripts/benchmark_agent.py            # → web/src/lib/data/agent-benchm
   CPython 3.8+ tuple hashing and set probing so the port returns the same paths and node counts.
   Fixtures are generated with CPython 3.12.
 - **Benchmark.** `_4399` vs `random_play_agent`, 20 seeded games per board size and colour.
+  The original `get_valid_actions` returns a `set` of `("PLACE", r, q)` tuples, and CPython
+  randomises string hashes per process, so the script re-runs itself with `PYTHONHASHSEED=0`;
+  with that pin the output is byte-for-byte reproducible.
 
 ## Credits
 

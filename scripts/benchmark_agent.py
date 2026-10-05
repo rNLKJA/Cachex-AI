@@ -7,8 +7,13 @@ Benchmark the ORIGINAL _4399 agent against the ORIGINAL random_play_agent.
 
 Both players are imported unchanged from ``coursework/Project Part B``. Games
 are driven through the subject-provided referee ``Game`` class (the same rules
-the assessment used), with Python's global ``random`` seeded per game so the
-numbers are reproducible under CPython 3.12.
+the assessment used), with Python's global ``random`` seeded per game.
+
+The original ``get_valid_actions`` builds a ``set`` of ``("PLACE", r, q)``
+tuples, and CPython randomises ``str`` hashes per process, so the order handed
+to ``random.shuffle`` would change between runs even with a fixed seed. The
+script therefore re-executes itself with ``PYTHONHASHSEED=0``, which makes the
+numbers byte-for-byte reproducible under CPython 3.12.
 
 The summary is written to ``web/src/lib/data/agent-benchmark.json`` and shown
 on the landing page.
@@ -36,7 +41,18 @@ SIZES = [4, 5, 6, 7]
 GAMES_PER_COLOUR = 20
 
 
+def pin_hash_seed() -> None:
+    """Re-run this script under PYTHONHASHSEED=0 so set order is stable."""
+    if os.environ.get("PYTHONHASHSEED") != "0":
+        os.execve(
+            sys.executable,
+            [sys.executable, *sys.argv],
+            {**os.environ, "PYTHONHASHSEED": "0"},
+        )
+
+
 def main() -> None:
+    pin_hash_seed()
     os.chdir(PART_B)  # utility/evaluation.py opens ./utility/weights.json
     sys.path.insert(0, str(PART_B))
     sys.path.insert(1, str(SKELETON))  # random_play_agent package
@@ -95,6 +111,7 @@ def main() -> None:
         "meta": {
             "generatedBy": "scripts/benchmark_agent.py",
             "python": platform.python_version(),
+            "pythonHashSeed": os.environ.get("PYTHONHASHSEED"),
             "opponent": "random_play_agent (coursework/Project Part B/skeleton-code-B)",
             "agent": "_4399 (coursework/Project Part B/code)",
         },
