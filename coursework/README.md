@@ -2,15 +2,17 @@
 
 This folder is the original submission by team `_4399` (Sunchuangyu "Rin" Huang and
 Wei Zhao) for COMP30024 Artificial Intelligence at the University of Melbourne. It was
-moved here with `git mv` so its history is preserved. **The contents are unchanged** and
-are kept for reference; the web app in [`../web`](../web) is a TypeScript port of this code.
+moved here with `git mv` so its history is preserved. **The code is unchanged** and is
+kept for reference; the web app in [`../web`](../web) is a TypeScript port of this code.
+
+The subject specification PDFs are university material, so they are kept privately and not
+published here.
 
 | Path | What it is |
 | --- | --- |
 | `Project Part A/code/` | A\* search solver (`python -m search input.json [Red\|Blue]`), sample inputs and their recorded outputs |
 | `Project Part A/notebook/` | Development notebooks and the Manhattan vs Euclidean expansion charts |
 | `Project Part A/report/` | Our Part A report (PDF) |
-| `Project Part A/specification/` | The subject's specification PDFs (University of Melbourne material, not redistributed on the website) |
 | `Project Part B/code/` | The game-playing agent `_4399` (minimax + alpha-beta), `utility/` (board, evaluation, `weights.json`) and the subject-provided `referee/` |
 | `Project Part B/skeleton-code-B/` | The starting skeleton plus `random_play_agent` and `human_player` used for testing |
 | `_archive/README.original.md` | The README as it was during the semester |

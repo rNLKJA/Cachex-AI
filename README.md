@@ -347,8 +347,9 @@ and Bradley-Terry maximum-likelihood strengths. The reference values are listed 
 
 - **Sunchuangyu "Rin" Huang** ([@rNLKJA](https://github.com/rNLKJA)) and **Wei Zhao**, team `_4399`.
 - The referee (`coursework/Project Part B/code/referee`) and project specifications were provided
-  by the COMP30024 teaching team at the University of Melbourne. The website paraphrases the task
-  and does not host the specification PDFs.
+  by the COMP30024 teaching team at the University of Melbourne. The website paraphrases the task.
+  The subject specifications are university material, so I keep them privately and they are not
+  published in this repository.
 
 ## Academic integrity
 

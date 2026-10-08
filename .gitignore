@@ -39,3 +39,8 @@ venv/
 # Playwright / test artefacts
 test-results/
 playwright-report/
+
+# University material (subject specifications), kept privately and not published
+coursework/**/specification/
+coursework/**/*spec*.pdf
+coursework/**/AI_2022_Project_*.pdf
