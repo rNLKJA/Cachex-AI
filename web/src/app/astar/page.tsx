@@ -68,10 +68,11 @@ export default function AstarPage() {
               {formatPStatement(o.mcnemar.pValue)}).
             </Finding>
             <Finding>
-              <strong>Why: neither heuristic is admissible here.</strong> On this hex grid a step
-              like (1, −1) costs 1, but Manhattan scores it 2 and Euclidean √2. Overestimating makes
-              the search greedier: fewer expansions, longer paths. The two sample inputs happen to
-              be solved optimally (8 and 13 cells, confirmed by BFS).
+              <strong>Why: neither heuristic is admissible here.</strong> Our 2022 report argued
+              that both were; that was wrong. On this hex grid a step like (1, −1) costs 1, but
+              Manhattan scores it 2 and Euclidean √2. Overestimating makes the search greedier:
+              fewer expansions, longer paths. The two sample inputs happen to be solved optimally (8
+              and 13 cells, confirmed by BFS).
             </Finding>
           </ul>
           <PairedStudySummaryView summary={summary} />

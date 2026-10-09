@@ -239,6 +239,11 @@ export default function HomePage() {
               colour that blocks the search. A notebook experiment compared the heuristics on
               hundreds of random boards.
             </p>
+            <p className="text-muted-foreground mt-3">
+              <strong className="text-foreground">Corrected in 2026:</strong> our report argued that
+              both heuristics were admissible. On this hex grid neither is, so A* can return a
+              longer path than the shortest one. The A* Lab measures how often.
+            </p>
             <Button asChild variant="outline" className="mt-5">
               <Link href="/astar">
                 Open the A* Lab <ArrowRight />
