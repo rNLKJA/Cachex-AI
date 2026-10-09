@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 
 import { AiProvider } from "@/components/ai/ai-provider";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -9,19 +9,30 @@ import { SITE } from "@/lib/site";
 
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
+// Self-hosted latin subsets from the @fontsource-variable packages (see
+// src/app/fonts/README.md), so builds never fetch Google Fonts.
+const bricolage = localFont({
+  src: "./fonts/bricolage-grotesque-latin-wght-normal.woff2",
+  weight: "200 800",
+  style: "normal",
   variable: "--font-display",
-  subsets: ["latin"],
+  display: "swap",
 });
 
-const sans = Geist({
+const geist = localFont({
+  src: "./fonts/geist-latin-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  display: "swap",
 });
 
-const mono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -54,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en-AU"
       suppressHydrationWarning
-      className={`${display.variable} ${sans.variable} ${mono.variable} h-full`}
+      className={`${bricolage.variable} ${geist.variable} ${geistMono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider
