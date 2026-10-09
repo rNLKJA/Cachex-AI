@@ -174,7 +174,8 @@ From the 2026 evaluation (details, seeds and downloadable data on the site):
   but returns a shortest path on 74.3% of solvable boards (71.4% to 77.0%) against 85.6% (83.2% to
   87.7%) for Euclidean. On the same 931 boards that is 11.3 points fewer (paired bootstrap 95% CI
   9.1 to 13.3); where only one heuristic was optimal it was Manhattan on 1 board and Euclidean on
-  106 (exact McNemar p < 0.001). Neither heuristic is admissible on this hex grid.
+  106 (exact McNemar p < 0.001). Neither heuristic is admissible on this hex grid, although
+  our 2022 report argued that both were.
 - **No detectable disagreement with the original Python** on the pairings feasible in Python
   (480 games; every Newcombe 95% interval for the six win-rate differences contains 0). With 80
   games per pairing this check can only detect differences larger than about ±15 points.
